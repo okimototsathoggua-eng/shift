@@ -29,17 +29,17 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background-color: #f8fafc;
+      background-color: #f1f5f9;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
     }
     
-    /* iPhoneのノッチやDynamic Island、ホームバーを考慮したゆとりのあるセーフエリア */
+    /* 上部・下部にゆったりとした安全な余白を確保 */
     .top-safe-area {
-      padding-top: max(20px, env(safe-area-inset-top));
+      padding-top: max(16px, env(safe-area-inset-top));
     }
     .bottom-safe-area {
-      padding-bottom: max(18px, env(safe-area-inset-bottom));
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
     }
 
     .no-scrollbar::-webkit-scrollbar {
@@ -51,8 +51,9 @@
     }
   </style>
 </head>
-<body class="h-full w-full font-sans antialiased text-slate-800 bg-slate-100">
-  <div id="root" class="h-full w-full"></div>
+<body class="h-full w-full font-sans antialiased text-slate-800 bg-slate-200 flex items-center justify-center">
+  <!-- スマホフレームサイズ制限 (PCでもスマホ同様に表示) -->
+  <div id="root" class="h-full w-full max-w-md bg-slate-50 flex flex-col shadow-2xl overflow-hidden relative"></div>
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
@@ -62,12 +63,16 @@
     const Icons = {
       Calendar: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>,
       Camera: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>,
+      Sync: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>,
       Settings: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>,
       Palmtree: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,
       Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"/></svg>,
+      Download: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>,
+      ExternalLink: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>,
       Close: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>,
       Sparkles: () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clipRule="evenodd"/></svg>,
       Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
+      Folder: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/></svg>,
     };
 
     const DEFAULT_SHIFT_PATTERNS = [
@@ -122,6 +127,7 @@
       const [isModalOpen, setIsModalOpen] = useState(false);
 
       const fileInputRef = useRef(null);
+      const libraryInputRef = useRef(null);
 
       const showToast = (msg, type = 'info') => {
         setToastMessage({ msg, type });
@@ -169,6 +175,106 @@
       };
 
       const paidLeaveStats = calculatePaidLeave();
+
+      // GoogleカレンダーURL生成
+      const generateGoogleCalendarUrl = (shift) => {
+        const isFullLeave = shift.paidLeaveHours >= workHoursPerDay || shift.shiftName === '公休';
+        if (!shift.startTime || !shift.endTime || isFullLeave) {
+          const dateStr = shift.date.replace(/-/g, '');
+          const nextDate = new Date(shift.date);
+          nextDate.setDate(nextDate.getDate() + 1);
+          const nextDateStr = nextDate.toISOString().slice(0, 10).replace(/-/g, '');
+          const details = encodeURIComponent(`勤務シフト: ${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有給消費: ${shift.paidLeaveHours}時間)` : ''}\n${shift.note || ''}`);
+          return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[シフト] ${shift.shiftName}`)}&dates=${dateStr}/${nextDateStr}&details=${details}`;
+        }
+
+        const startIso = `${shift.date.replace(/-/g, '')}T${shift.startTime.replace(':', '')}00`;
+        let endDate = shift.date;
+        if (shift.endTime < shift.startTime) {
+          const d = new Date(shift.date);
+          d.setDate(d.getDate() + 1);
+          endDate = d.toISOString().slice(0, 10);
+        }
+        const endIso = `${endDate.replace(/-/g, '')}T${shift.endTime.replace(':', '')}00`;
+        const leaveText = shift.paidLeaveHours > 0 ? `\n有給消費: ${shift.paidLeaveHours}時間` : '';
+        const details = encodeURIComponent(`【シフト勤務】\n区分: ${shift.shiftName}\n時間: ${shift.startTime} 〜 ${shift.endTime}${leaveText}\n休憩: ${shift.breakTime || 0}分\nメモ: ${shift.note || 'なし'}`);
+
+        return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[シフト] ${shift.shiftName}`)}&dates=${startIso}/${endIso}&details=${details}`;
+      };
+
+      // iCalendar (.ics) 一括エクスポート
+      const handleExportICS = () => {
+        if (shifts.length === 0) {
+          showToast('エクスポートするシフトがありません', 'error');
+          return;
+        }
+
+        let icsContent = [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'PRODID:-//ShiftSnap//JA',
+          'CALSCALE:GREGORIAN',
+          'METHOD:PUBLISH',
+          'X-WR-CALNAME:勤務シフト＆有給',
+          'X-WR-TIMEZONE:Asia/Tokyo'
+        ];
+
+        shifts.forEach((s) => {
+          const now = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+          const uid = `shift-${s.id}-${s.date}@shiftsnap.local`;
+          const isFullLeave = s.paidLeaveHours >= workHoursPerDay || !s.startTime || !s.endTime || s.shiftName === '公休';
+
+          if (isFullLeave) {
+            const dtstart = s.date.replace(/-/g, '');
+            const nextD = new Date(s.date);
+            nextD.setDate(nextD.getDate() + 1);
+            const dtend = nextD.toISOString().slice(0, 10).replace(/-/g, '');
+
+            icsContent.push(
+              'BEGIN:VEVENT',
+              `UID:${uid}`,
+              `DTSTAMP:${now}`,
+              `DTSTART;VALUE=DATE:${dtstart}`,
+              `DTEND;VALUE=DATE:${dtend}`,
+              `SUMMARY:[シフト] ${s.shiftName}`,
+              `DESCRIPTION:${s.paidLeaveHours > 0 ? `有給休暇 (${s.paidLeaveHours}時間消費)` : '休日'}\\n${s.note || ''}`,
+              'END:VEVENT'
+            );
+          } else {
+            const dtstart = `${s.date.replace(/-/g, '')}T${s.startTime.replace(':', '')}00`;
+            let endDate = s.date;
+            if (s.endTime < s.startTime) {
+              const d = new Date(s.date);
+              d.setDate(d.getDate() + 1);
+              endDate = d.toISOString().slice(0, 10);
+            }
+            const dtend = `${endDate.replace(/-/g, '')}T${s.endTime.replace(':', '')}00`;
+            const leaveNote = s.paidLeaveHours > 0 ? ` (時間有給: ${s.paidLeaveHours}h消費)` : '';
+
+            icsContent.push(
+              'BEGIN:VEVENT',
+              `UID:${uid}`,
+              `DTSTAMP:${now}`,
+              `DTSTART:${dtstart}`,
+              `DTEND:${dtend}`,
+              `SUMMARY:[シフト] ${s.shiftName}${leaveNote}`,
+              `DESCRIPTION:時間: ${s.startTime}-${s.endTime} (休憩${s.breakTime || 0}分)${leaveNote}\\n${s.note || ''}`,
+              'END:VEVENT'
+            );
+          }
+        });
+
+        icsContent.push('END:VCALENDAR');
+        const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', `shifts_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}.ics`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast('カレンダー(.ics)を書き出しました！', 'success');
+      };
 
       const handleImageChange = (e) => {
         const file = e.target.files?.[0];
@@ -287,6 +393,7 @@
         showToast('カレンダーに登録しました！', 'success');
       };
 
+      // カレンダー日付生成
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       const firstDay = new Date(year, month, 1).getDay();
@@ -301,29 +408,29 @@
       const totalWeeks = calendarDays.length / 7;
 
       return (
-        <div className="h-full w-full flex flex-col justify-between overflow-hidden bg-slate-100 top-safe-area bottom-safe-area">
+        <div className="h-full w-full flex flex-col justify-between overflow-hidden bg-slate-50">
           {/* トースト通知 */}
           {toastMessage && (
-            <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-xl shadow-2xl text-xs font-bold text-white transition-all ${
+            <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-xl shadow-2xl text-xs font-bold text-white transition-all ${
               toastMessage.type === 'error' ? 'bg-rose-600' : toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-indigo-600'
             }`}>
               {toastMessage.msg}
             </div>
           )}
 
-          {/* 上部ヘッダー（上下の余白をさらにゆったり確保） */}
-          <header className="bg-white border-b border-slate-200/80 px-4 py-3 shrink-0 flex items-center justify-between z-20 shadow-xs mx-3 mt-2 rounded-2xl">
+          {/* 上部ヘッダー */}
+          <header className="top-safe-area bg-white border-b border-slate-200 px-4 pb-3 pt-3 shrink-0 flex items-center justify-between z-20 shadow-xs">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition"
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition"
               >&lt;</button>
               <h1 className="text-base font-black text-slate-900 tracking-tight px-1">
                 {year}年 {month + 1}月
               </h1>
               <button
                 onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition"
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition"
               >&gt;</button>
             </div>
 
@@ -343,15 +450,15 @@
                   });
                   setIsModalOpen(true);
                 }}
-                className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+                className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
               >
                 <Icons.Plus />
-                <span>シフト追加</span>
+                <span>追加</span>
               </button>
             </div>
           </header>
 
-          {/* メインエリア（上下の余白を少し下げてゆったり配置） */}
+          {/* メインエリア */}
           <main className="flex-1 w-full flex flex-col px-3 py-3 overflow-hidden">
             {activeTab === 'calendar' && (
               <div className="h-full w-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-3.5 overflow-hidden">
@@ -382,13 +489,17 @@
                     </div>
                   </div>
 
-                  <div className="text-right pl-3 border-l border-pink-200/60">
+                  <div className="text-right pl-3 border-l border-pink-200/60 flex flex-col items-end gap-1">
                     <div className="text-[10px] text-slate-400 font-medium">
                       総残計 {paidLeaveStats.remainingHours}h
                     </div>
-                    <div className="text-[11px] font-bold text-slate-700 mt-0.5">
-                      今月取得: <span className="text-pink-600 font-extrabold">{paidLeaveStats.monthlyHoursConsumed}h</span>
-                    </div>
+                    <button
+                      onClick={handleExportICS}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-2xs transition active:scale-95"
+                    >
+                      <Icons.Download />
+                      <span>カレンダー同期(.ics)</span>
+                    </button>
                   </div>
                 </div>
 
@@ -403,9 +514,9 @@
                   <span className="text-blue-500">土</span>
                 </div>
 
-                {/* カレンダー本体グリッド */}
+                {/* カレンダーグリッド */}
                 <div
-                  className="grid grid-cols-7 flex-1 w-full gap-2 mt-2.5 overflow-hidden"
+                  className="grid grid-cols-7 flex-1 w-full gap-2 mt-2 overflow-hidden"
                   style={{ gridTemplateRows: `repeat(${totalWeeks}, minmax(0, 1fr))` }}
                 >
                   {calendarDays.map((item, idx) => {
@@ -491,41 +602,64 @@
               </div>
             )}
 
-            {/* ========== TAB: 写真スキャン ========== */}
+            {/* ========== TAB: 写真スキャン（スマホファイル・ライブラリ対応） ========== */}
             {activeTab === 'scan' && (
               <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 space-y-4 overflow-y-auto no-scrollbar">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">シフト表の写真から自動取り込み</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">「{targetName}」さんのシフトと時間有給をGemini AIが認識します</p>
+                  <h2 className="text-base font-bold text-slate-900">シフト表の写真・ファイルを取り込み</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">スマホのカメラ撮影、または保存済み写真から「{targetName}」さんのシフトを自動抽出</p>
                 </div>
 
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex-1 border-2 border-dashed border-pink-300 bg-pink-50/20 hover:bg-pink-50/50 rounded-3xl p-5 text-center cursor-pointer flex flex-col items-center justify-center min-h-[180px] transition"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={handleImageChange}
-                  />
-                  {selectedImage ? (
-                    <div>
-                      <img src={selectedImage} alt="シフト写真" className="max-h-44 object-contain rounded-xl mx-auto shadow-sm" />
-                      <span className="text-xs text-pink-600 font-bold block mt-2.5">別の写真に変更</span>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* カメラで撮影ボタン */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-pink-300 bg-pink-50/30 hover:bg-pink-50/60 text-pink-700 transition active:scale-95"
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={handleImageChange}
+                    />
+                    <div className="w-12 h-12 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center mb-2 shadow-xs">
+                      <Icons.Camera />
                     </div>
-                  ) : (
-                    <div>
-                      <div className="w-14 h-14 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xs">
-                        <Icons.Camera />
-                      </div>
-                      <span className="text-sm font-bold text-slate-700 block">写真を撮影または選択</span>
-                      <span className="text-xs text-slate-400 block mt-1">時間単位有休も自動判別</span>
+                    <span className="text-xs font-bold">写真を撮影</span>
+                  </button>
+
+                  {/* スマホの写真・ファイル選択ボタン */}
+                  <button
+                    onClick={() => libraryInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-indigo-300 bg-indigo-50/30 hover:bg-indigo-50/60 text-indigo-700 transition active:scale-95"
+                  >
+                    <input
+                      ref={libraryInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageChange}
+                    />
+                    <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-2 shadow-xs">
+                      <Icons.Folder />
                     </div>
-                  )}
+                    <span className="text-xs font-bold">写真・ファイルを選ぶ</span>
+                  </button>
                 </div>
+
+                {/* プレビューエリア */}
+                {selectedImage ? (
+                  <div className="flex-1 border border-slate-200 rounded-2xl p-3 text-center bg-slate-50 flex flex-col justify-center items-center">
+                    <img src={selectedImage} alt="選択されたシフト写真" className="max-h-40 object-contain rounded-xl shadow-xs" />
+                    <span className="text-xs text-indigo-600 font-bold mt-2">選択完了 (画像データ読込済)</span>
+                  </div>
+                ) : (
+                  <div className="flex-1 border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center flex flex-col items-center justify-center text-slate-400 text-xs">
+                    ここに選択した画像が表示されます
+                  </div>
+                )}
 
                 <button
                   onClick={handleScanShiftTable}
@@ -552,7 +686,7 @@
                       </button>
                     </div>
 
-                    <div className="divide-y divide-slate-100 max-h-40 overflow-y-auto">
+                    <div className="divide-y divide-slate-100 max-h-36 overflow-y-auto">
                       {scanResults.map((item, idx) => (
                         <div key={item.id} className="py-2 flex items-center justify-between text-xs">
                           <span className="font-bold">{item.date.slice(5)}</span>
@@ -711,13 +845,13 @@
                       type="time"
                       value={editingShift.startTime}
                       onChange={(e) => setEditingShift(prev => ({ ...prev, startTime: e.target.value }))}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
                     />
                     <input
                       type="time"
                       value={editingShift.endTime}
                       onChange={(e) => setEditingShift(prev => ({ ...prev, endTime: e.target.value }))}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
                     />
                   </div>
                 )}
@@ -740,8 +874,8 @@
             </div>
           )}
 
-          {/* 最下部ナビバー（ホームバーに重ならないよう余人を広げたデザイン） */}
-          <nav className="bg-white border-t border-slate-200 shrink-0 px-4 py-3 mx-3 mb-2 rounded-2xl flex justify-around shadow-lg z-20">
+          {/* 最下部ナビバー */}
+          <nav className="bottom-safe-area bg-white border-t border-slate-200 shrink-0 px-4 py-2.5 flex justify-around shadow-lg z-20">
             <button
               onClick={() => setActiveTab('calendar')}
               className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'calendar' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}
@@ -754,7 +888,7 @@
               className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'scan' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}
             >
               <Icons.Camera />
-              <span className="text-[10px]">写真スキャン</span>
+              <span className="text-[10px]">写真・ファイル</span>
             </button>
             <button
               onClick={() => setActiveTab('settings')}
