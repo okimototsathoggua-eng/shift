@@ -14,7 +14,967 @@
 
   <!-- アイコン -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23ec4899'/><path d='M30 25h40v50H30z' fill='none' stroke='white' stroke-width='6'/><path d='M30 40h40M45 20v10M55 20v10' stroke='white' stroke-width='6' stroke-linecap='round'/><circle cx='50' cy='58' r='7' fill='white'/></svg>" />
+  <link rel="apple-touch-icon" href="data:ima<!DOCTYPE html>
+<html lang="ja" class="h-full w-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>ShiftSnap - 勤務シフト＆有給管理</title>
+
+  <!-- PWA & フルスクリーン最適化 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ShiftSnap" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#4F46E5" />
+
+  <!-- アイコン -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23ec4899'/><path d='M30 25h40v50H30z' fill='none' stroke='white' stroke-width='6'/><path d='M30 40h40M45 20v10M55 20v10' stroke='white' stroke-width='6' stroke-linecap='round'/><circle cx='50' cy='58' r='7' fill='white'/></svg>" />
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23ec4899'/><path d='M30 25h40v50H30z' fill='none' stroke='white' stroke-width='6'/><path d='M30 40h40M45 20v10M55 20v10' stroke='white' stroke-width='6' stroke-linecap='round'/><circle cx='50' cy='58' r='7' fill='white'/></svg>" />
+
+  <!-- Tailwind CSS & React / Babel -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    html, body, #root {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #f8fafc;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .top-safe-area {
+      padding-top: max(12px, env(safe-area-inset-top));
+    }
+    .bottom-safe-area {
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="h-full w-full font-sans antialiased text-slate-800 bg-slate-100">
+  <div id="root" class="h-full w-full"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const apiKey = "";
+
+    const Icons = {
+      Calendar: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>,
+      Camera: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>,
+      Settings: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>,
+      Palmtree: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,
+      Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"/></svg>,
+      Close: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>,
+      Sparkles: () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clipRule="evenodd"/></svg>,
+      Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
+      ExternalLink: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>,
+      Filter: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+    };
+
+    const DEFAULT_SHIFT_PATTERNS = [
+      { id: 'early', name: '早番', symbol: '早', startTime: '08:30', endTime: '17:30', breakTime: 60, color: '#2563EB', bgColor: '#DBEAFE', paidLeaveHours: 0 },
+      { id: 'day', name: '日勤', symbol: '日', startTime: '09:00', endTime: '18:00', breakTime: 60, color: '#059669', bgColor: '#D1FAE5', paidLeaveHours: 0 },
+      { id: 'late', name: '遅番', symbol: '遅', startTime: '12:00', endTime: '21:00', breakTime: 60, color: '#D97706', bgColor: '#FEF3C7', paidLeaveHours: 0 },
+      { id: 'night', name: '夜勤', symbol: '夜', startTime: '21:00', endTime: '09:00', breakTime: 120, color: '#7C3AED', bgColor: '#EDE9FE', paidLeaveHours: 0 },
+      { id: 'off', name: '公休', symbol: '休', startTime: '', endTime: '', breakTime: 0, color: '#64748B', bgColor: '#F1F5F9', paidLeaveHours: 0 },
+      { id: 'paid_full', name: '有給', symbol: '有', startTime: '', endTime: '', breakTime: 0, color: '#DB2777', bgColor: '#FCE7F3', paidLeaveHours: 8 },
+      { id: 'paid_half', name: '半休', symbol: '半', startTime: '09:00', endTime: '13:30', breakTime: 0, color: '#E11D48', bgColor: '#FFE4E6', paidLeaveHours: 4 },
+      { id: 'paid_1h', name: '時間休(1h)', symbol: '1h', startTime: '09:00', endTime: '17:00', breakTime: 60, color: '#9D174D', bgColor: '#FCE7F3', paidLeaveHours: 1 },
+    ];
+
+    function App() {
+      const [activeTab, setActiveTab] = useState('calendar');
+
+      // ユーザー設定
+      const [targetName, setTargetName] = useState('自分');
+      const [targetAliases, setTargetAliases] = useState('自分, 佐藤, satou');
+      const [workHoursPerDay, setWorkHoursPerDay] = useState(8);
+      const [shiftPatterns, setShiftPatterns] = useState(DEFAULT_SHIFT_PATTERNS);
+
+      // 有給設定
+      const [basePaidLeaveDays, setBasePaidLeaveDays] = useState(15);
+      const [grantMonth, setGrantMonth] = useState(4);
+      const [grantDay, setGrantDay] = useState(1);
+      const [grantAmountDays, setGrantAmountDays] = useState(12);
+      const [baseYear, setBaseYear] = useState(2026);
+
+      // シフトデータ
+      const [currentDate, setCurrentDate] = useState(new Date());
+      const [shifts, setShifts] = useState([
+        {
+          id: 's-1',
+          date: new Date().toISOString().slice(0, 10),
+          shiftName: '日勤',
+          startTime: '09:00',
+          endTime: '18:00',
+          breakTime: 60,
+          paidLeaveHours: 0,
+          note: '',
+          color: '#059669',
+          bgColor: '#D1FAE5'
+        }
+      ]);
+
+      // スキャン強化モード (画像最適化・前処理用)
+      const [selectedImage, setSelectedImage] = useState(null);
+      const [optimizedImageBase64, setOptimizedImageBase64] = useState(null);
+      const [isScanning, setIsScanning] = useState(false);
+      const [scanResults, setScanResults] = useState([]);
+      const [scanMessage, setScanMessage] = useState('');
+      const [scanContrastMode, setScanContrastMode] = useState('normal'); // normal | high
+
+      // モーダル
+      const [editingShift, setEditingShift] = useState(null);
+      const [isModalOpen, setIsModalOpen] = useState(false);
+
+      const fileInputRef = useRef(null);
+
+      const showToast = (msg, type = 'info') => {
+        setToastMessage({ msg, type });
+        setTimeout(() => setToastMessage(null), 3000);
+      };
+      const [toastMessage, setToastMessage] = useState(null);
+
+      // 有給残数計算
+      const calculatePaidLeave = () => {
+        const cYear = currentDate.getFullYear();
+        const cMonth = currentDate.getMonth() + 1;
+        const cDay = currentDate.getDate();
+
+        let addedGrants = 0;
+        if (cYear > baseYear) {
+          for (let y = baseYear + 1; y <= cYear; y++) {
+            if (y < cYear) {
+              addedGrants += grantAmountDays;
+            } else {
+              if (cMonth > grantMonth || (cMonth === grantMonth && cDay >= grantDay)) {
+                addedGrants += grantAmountDays;
+              }
+            }
+          }
+        }
+
+        const totalHoursAvailable = (basePaidLeaveDays + addedGrants) * workHoursPerDay;
+        const totalHoursConsumed = shifts.reduce((sum, s) => sum + (Number(s.paidLeaveHours) || 0), 0);
+        
+        const curMonthPrefix = `${cYear}-${String(cMonth).padStart(2, '0')}`;
+        const monthlyHoursConsumed = shifts
+          .filter(s => s.date.startsWith(curMonthPrefix))
+          .reduce((sum, s) => sum + (Number(s.paidLeaveHours) || 0), 0);
+
+        const remainingHours = Math.max(0, totalHoursAvailable - totalHoursConsumed);
+        const remainingDays = Math.floor(remainingHours / workHoursPerDay);
+        const remainingExtraHours = Math.round((remainingHours % workHoursPerDay) * 10) / 10;
+
+        return {
+          totalHoursAvailable,
+          totalHoursConsumed,
+          monthlyHoursConsumed,
+          remainingHours,
+          remainingDays,
+          remainingExtraHours
+        };
+      };
+
+      const paidLeaveStats = calculatePaidLeave();
+
+      // 画像選択＆AI認識率アップのための自動最適化処理（Canvasによるリサイズ・コントラスト調整）
+      const handleImageChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // AI読み取りに最適な最大幅1600pxにスケーリング
+            let width = img.width;
+            let height = img.height;
+            const maxDim = 1600;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // コントラスト強化モードが有効な場合の画像処理
+            if (scanContrastMode === 'high') {
+              const imgData = ctx.getImageData(0, 0, width, height);
+              const data = imgData.data;
+              const factor = 1.3; // コントラスト係数
+              for (let i = 0; i < data.length; i += 4) {
+                data[i] = Math.min(255, Math.max(0, factor * (data[i] - 128) + 128));
+                data[i+1] = Math.min(255, Math.max(0, factor * (data[i+1] - 128) + 128));
+                data[i+2] = Math.min(255, Math.max(0, factor * (data[i+2] - 128) + 128));
+              }
+              ctx.putImageData(imgData, 0, 0);
+            }
+
+            const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            setSelectedImage(optimizedDataUrl);
+            setOptimizedImageBase64({
+              data: optimizedDataUrl.split(',')[1],
+              mimeType: 'image/jpeg'
+            });
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      };
+
+      // 高精度 AIスキャン実行
+      const handleScanShiftTable = async () => {
+        if (!optimizedImageBase64) {
+          showToast('写真を選択してください', 'error');
+          return;
+        }
+
+        setIsScanning(true);
+        setScanMessage('AIがシフト表を高精度解析中（文字・記号・時間有休を抽出）...');
+        setScanResults([]);
+
+        try {
+          const year = currentDate.getFullYear();
+          const month = currentDate.getMonth() + 1;
+
+          // 認識率を劇的に上げるための厳密なシステムプロンプト
+          const systemPrompt = `あなたはプロフェッショナルなOCR・シフト表解析AIです。
+提供されたシフト表画像から、指定された対象者のスケジュール（日付ごとの勤務シフト、時間単位の有給休暇）を正確に抽出し、必ず指定されたJSON構造で返してください。
+
+【対象者情報】
+- 主要名: "${targetName}"
+- 検索候補・別名・略号: "${targetAliases}"
+- 対象月: ${year}年${month}月
+
+【定義されているシフト＆有給パターン】
+${JSON.stringify(shiftPatterns.map(p => ({ name: p.name, symbol: p.symbol, hours: p.paidLeaveHours })))}
+
+【抽出ルール】
+1. 表の中から上記対象者（またはその行・列）のデータを特定してください。
+2. 日付ごとに「シフト名」「開始時間」「終了時間」「有休消費時間(0〜8h)」を読み取ります。
+3. 「有」「有休」「全休」表記は有給${workHoursPerDay}時間、「半休」は${workHoursPerDay / 2}時間、「1h」「2h」等の時間休はその時間数を paidLeaveHours に設定してください。
+4. 確実に読み取れる日付（YYYY-MM-DD形式）とシフト名を格納してください。`;
+
+          const payload = {
+            contents: [{
+              role: "user",
+              parts: [
+                { text: `「${targetName}」さんの ${year}年${month}月 のシフト表データを正確に抽出してください。` },
+                { inlineData: { mimeType: optimizedImageBase64.mimeType, data: optimizedImageBase64.data } }
+              ]
+            }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: "OBJECT",
+                properties: {
+                  detectedPersonName: { type: "STRING" },
+                  shifts: {
+                    type: "ARRAY",
+                    items: {
+                      type: "OBJECT",
+                      properties: {
+                        date: { type: "STRING", description: "YYYY-MM-DD形式の日付" },
+                        shiftName: { type: "STRING", description: "早番、日勤、遅番、公休、有給などのシフト名" },
+                        startTime: { type: "STRING", description: "HH:MM形式" },
+                        endTime: { type: "STRING", description: "HH:MM形式" },
+                        paidLeaveHours: { type: "NUMBER", description: "有休消費時間数" },
+                        note: { type: "STRING" }
+                      },
+                      required: ["date", "shiftName"]
+                    }
+                  }
+                },
+                required: ["shifts"]
+              }
+            }
+          };
+
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          const parsed = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text);
+
+          const list = (parsed.shifts || []).map((s, idx) => {
+            const p = shiftPatterns.find(pat => pat.name === s.shiftName || pat.symbol === s.shiftName);
+            const hours = Number(s.paidLeaveHours) || p?.paidLeaveHours || 0;
+            return {
+              id: `scan-${Date.now()}-${idx}`,
+              date: s.date,
+              shiftName: p?.name || s.shiftName || '日勤',
+              startTime: s.startTime || p?.startTime || (hours >= workHoursPerDay ? '' : '09:00'),
+              endTime: s.endTime || p?.endTime || (hours >= workHoursPerDay ? '' : '18:00'),
+              breakTime: p?.breakTime ?? (hours >= workHoursPerDay ? 0 : 60),
+              paidLeaveHours: hours,
+              color: p?.color || (hours > 0 ? '#DB2777' : '#2563EB'),
+              bgColor: p?.bgColor || (hours > 0 ? '#FCE7F3' : '#DBEAFE'),
+              note: s.note || ''
+            };
+          });
+
+          if (list.length === 0) {
+            setScanMessage('シフトが見つかりませんでした。「コントラスト高」を試すか、明るい場所で撮影し直してください。');
+            showToast('見つかりませんでした', 'error');
+          } else {
+            setScanResults(list);
+            setScanMessage(`${parsed.detectedPersonName ? `(${parsed.detectedPersonName}さん)` : ''} ${list.length}件のシフトを高精度抽出しました！`);
+            showToast(`${list.length}件抽出成功！`, 'success');
+          }
+        } catch (e) {
+          console.error(e);
+          setScanMessage('解析に失敗しました。写真のブレがないかご確認ください。');
+          showToast('スキャンエラー', 'error');
+        } finally {
+          setIsScanning(false);
+        }
+      };
+
+      const handleApplyScan = () => {
+        const dates = new Set(scanResults.map(s => s.date));
+        setShifts(prev => [...prev.filter(s => !dates.has(s.date)), ...scanResults].sort((a,b) => a.date.localeCompare(b.date)));
+        setScanResults([]);
+        setSelectedImage(null);
+        setOptimizedImageBase64(null);
+        setActiveTab('calendar');
+        showToast('カレンダーに登録しました！', 'success');
+      };
+
+      // カレンダー同期リンク生成
+      const openCalendarSync = (shift, type) => {
+        const isFullLeave = shift.paidLeaveHours >= workHoursPerDay || shift.shiftName === '公休';
+        const dateStr = shift.date.replace(/-/g, '');
+
+        if (type === 'google') {
+          if (!isFullLeave && shift.startTime && shift.endTime) {
+            const startIso = `${dateStr}T${shift.startTime.replace(':', '')}00`;
+            let endDate = shift.date;
+            if (shift.endTime < shift.startTime) {
+              const d = new Date(shift.date);
+              d.setDate(d.getDate() + 1);
+              endDate = d.toISOString().slice(0, 10);
+            }
+            const endIso = `${endDate.replace(/-/g, '')}T${shift.endTime.replace(':', '')}00`;
+            const details = encodeURIComponent(`勤務シフト: ${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有休 ${shift.paidLeaveHours}h)` : ''}\n${shift.note || ''}`);
+            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[シフト] ${shift.shiftName}`)}&dates=${startIso}/${endIso}&details=${details}`;
+            window.open(url, '_blank');
+          } else {
+            const nextDate = new Date(shift.date);
+            nextDate.setDate(nextDate.getDate() + 1);
+            const nextDateStr = nextDate.toISOString().slice(0, 10).replace(/-/g, '');
+            const details = encodeURIComponent(`勤務シフト: ${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有休消費: ${shift.paidLeaveHours}時間)` : ''}\n${shift.note || ''}`);
+            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[シフト] ${shift.shiftName}`)}&dates=${dateStr}/${nextDateStr}&details=${details}`;
+            window.open(url, '_blank');
+          }
+          showToast('Googleカレンダーを開きました', 'success');
+        } else {
+          const icsData = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${shift.shiftName}\nDESCRIPTION:${shift.note || ''}\nDTSTART:${dateStr}\nEND:VEVENT\nEND:VCALENDAR`;
+          const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `shift_${shift.date}.ics`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          showToast('カレンダーイベントを書き出しました', 'success');
+        }
+      };
+
+      // カレンダーの日付生成
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const totalDays = new Date(year, month + 1, 0).getDate();
+      const calendarDays = [];
+      for (let i = 0; i < firstDay; i++) calendarDays.push(null);
+      for (let d = 1; d <= totalDays; d++) {
+        const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        calendarDays.push({ day: d, dateStr: dStr, shift: shifts.find(s => s.date === dStr) });
+      }
+      while (calendarDays.length % 7 !== 0) calendarDays.push(null);
+      const totalWeeks = calendarDays.length / 7;
+
+      return (
+        <div className="h-full w-full flex flex-col justify-between overflow-hidden bg-slate-100">
+          {/* トースト通知 */}
+          {toastMessage && (
+            <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-xl shadow-2xl text-xs font-bold text-white transition-all ${
+              toastMessage.type === 'error' ? 'bg-rose-600' : toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-indigo-600'
+            }`}>
+              {toastMessage.msg}
+            </div>
+          )}
+
+          {/* 上部ヘッダー */}
+          <header className="top-safe-area bg-white border-b border-slate-200/80 px-4 pb-3 pt-2 shrink-0 flex items-center justify-between z-20 shadow-xs">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition"
+              >&lt;</button>
+              <h1 className="text-base font-black text-slate-900 tracking-tight px-1">
+                {year}年 {month + 1}月
+              </h1>
+              <button
+                onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition"
+              >&gt;</button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const defaultP = shiftPatterns[0] || { name: '日勤', startTime: '09:00', endTime: '18:00', breakTime: 60, color: '#059669', bgColor: '#D1FAE5' };
+                  setEditingShift({
+                    date: new Date().toISOString().slice(0, 10),
+                    shiftName: defaultP.name,
+                    startTime: defaultP.startTime,
+                    endTime: defaultP.endTime,
+                    breakTime: defaultP.breakTime,
+                    paidLeaveHours: 0,
+                    note: '',
+                    color: defaultP.color,
+                    bgColor: defaultP.bgColor
+                  });
+                  setIsModalOpen(true);
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+              >
+                <Icons.Plus />
+                <span>シフト追加</span>
+              </button>
+            </div>
+          </header>
+
+          {/* メインエリア */}
+          <main className="flex-1 w-full flex flex-col px-3 py-2.5 overflow-hidden">
+            {activeTab === 'calendar' && (
+              <div className="h-full w-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-3 overflow-hidden">
+                
+                {/* 有給残数カード */}
+                <div className="bg-gradient-to-r from-pink-50 via-rose-50 to-pink-50 border border-pink-200/80 rounded-2xl px-4 py-2.5 mb-2.5 shrink-0 flex items-center justify-between shadow-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-pink-600 text-white flex items-center justify-center shadow-xs">
+                      <Icons.Palmtree />
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-bold text-slate-500 leading-none">残り有給休暇</div>
+                      <div className="flex items-baseline gap-1 mt-0.5">
+                        <span className="text-2xl font-black text-pink-600 tracking-tight">
+                          {paidLeaveStats.remainingDays}
+                        </span>
+                        <span className="text-xs font-bold text-pink-700">日</span>
+                        
+                        {paidLeaveStats.remainingExtraHours > 0 && (
+                          <>
+                            <span className="text-xl font-black text-pink-600 ml-1">
+                              {paidLeaveStats.remainingExtraHours}
+                            </span>
+                            <span className="text-xs font-bold text-pink-700">時間</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right pl-2 border-l border-pink-200/60">
+                    <div className="text-[10px] text-slate-400 font-medium">
+                      総残計 {paidLeaveStats.remainingHours}h
+                    </div>
+                    <div className="text-[11px] font-bold text-slate-700 mt-0.5">
+                      今月取得: <span className="text-pink-600 font-extrabold">{paidLeaveStats.monthlyHoursConsumed}h</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 曜日ヘッダー */}
+                <div className="grid grid-cols-7 text-center text-xs font-black text-slate-400 pb-1.5 border-b border-slate-100 shrink-0">
+                  <span className="text-rose-500">日</span>
+                  <span>月</span>
+                  <span>火</span>
+                  <span>水</span>
+                  <span>木</span>
+                  <span>金</span>
+                  <span className="text-blue-500">土</span>
+                </div>
+
+                {/* カレンダーグリッド */}
+                <div
+                  className="grid grid-cols-7 flex-1 w-full gap-1.5 mt-2 overflow-hidden"
+                  style={{ gridTemplateRows: `repeat(${totalWeeks}, minmax(0, 1fr))` }}
+                >
+                  {calendarDays.map((item, idx) => {
+                    if (!item) return <div key={`empty-${idx}`} className="bg-slate-50/40 rounded-2xl" />;
+
+                    const isToday = item.dateStr === new Date().toISOString().slice(0, 10);
+                    const shift = item.shift;
+                    const hasPaid = shift && shift.paidLeaveHours > 0;
+                    const dayOfWeek = (idx % 7);
+
+                    return (
+                      <div
+                        key={item.dateStr}
+                        onClick={() => {
+                          const defaultP = shiftPatterns[0] || { name: '日勤', startTime: '09:00', endTime: '18:00', breakTime: 60, color: '#059669', bgColor: '#D1FAE5' };
+                          setEditingShift(shift || {
+                            date: item.dateStr,
+                            shiftName: defaultP.name,
+                            startTime: defaultP.startTime,
+                            endTime: defaultP.endTime,
+                            breakTime: defaultP.breakTime,
+                            paidLeaveHours: defaultP.paidLeaveHours || 0,
+                            note: '',
+                            color: defaultP.color,
+                            bgColor: defaultP.bgColor
+                          });
+                          setIsModalOpen(true);
+                        }}
+                        className={`p-1.5 rounded-2xl border flex flex-col justify-between cursor-pointer transition active:scale-95 ${
+                          isToday
+                            ? 'border-indigo-500 bg-indigo-50/30 ring-2 ring-indigo-500/20'
+                            : hasPaid
+                            ? 'border-pink-200 bg-pink-50/40'
+                            : 'border-slate-100 hover:border-indigo-300 bg-white shadow-2xs'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[12px] font-black w-5 h-5 flex items-center justify-center rounded-full ${
+                            isToday
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : dayOfWeek === 0
+                              ? 'text-rose-600'
+                              : dayOfWeek === 6
+                              ? 'text-blue-600'
+                              : 'text-slate-700'
+                          }`}>
+                            {item.day}
+                          </span>
+
+                          {hasPaid && (
+                            <span className="text-[9px] font-black text-pink-600 bg-pink-100 px-1 py-0.2 rounded-md">
+                              有休
+                            </span>
+                          )}
+                        </div>
+
+                        {shift ? (
+                          <div
+                            className="rounded-xl px-1.5 py-0.5 text-center flex flex-col justify-center overflow-hidden"
+                            style={{ backgroundColor: shift.bgColor || '#EFF6FF' }}
+                          >
+                            <span
+                              className="text-[11px] font-black leading-tight truncate"
+                              style={{ color: shift.color || '#2563EB' }}
+                            >
+                              {shift.shiftName}
+                            </span>
+                            
+                            <span className="text-[9px] font-bold text-slate-500 leading-none truncate mt-0.5">
+                              {hasPaid
+                                ? `-${shift.paidLeaveHours}h`
+                                : shift.startTime
+                                ? `${shift.startTime.slice(0, 5)}`
+                                : '休み'}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="h-4" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ========== TAB: 写真スキャン（精度向上モード付き） ========== */}
+            {activeTab === 'scan' && (
+              <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-4 space-y-3 overflow-y-auto no-scrollbar">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">高精度AIスキャン</h2>
+                    <p className="text-xs text-slate-500">「{targetName}」さんのシフトを自動抽出</p>
+                  </div>
+                  {/* コントラスト切り替えボタン */}
+                  <button
+                    onClick={() => setScanContrastMode(prev => prev === 'normal' ? 'high' : 'normal')}
+                    className={`text-[11px] font-bold px-2.5 py-1 rounded-xl border flex items-center gap-1 transition ${
+                      scanContrastMode === 'high' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    <Icons.Filter />
+                    <span>コントラスト:{scanContrastMode === 'high' ? '高' : '標準'}</span>
+                  </button>
+                </div>
+
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-1 border-2 border-dashed border-pink-300 bg-pink-50/20 hover:bg-pink-50/50 rounded-2xl p-4 text-center cursor-pointer flex flex-col items-center justify-center min-h-[150px] transition"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageChange}
+                  />
+                  {selectedImage ? (
+                    <div>
+                      <img src={selectedImage} alt="シフト写真" className="max-h-36 object-contain rounded-xl mx-auto shadow-sm" />
+                      <span className="text-xs text-pink-600 font-bold block mt-2">アルバムから別の画像を選ぶ</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="w-12 h-12 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-xs">
+                        <Icons.Camera />
+                      </div>
+                      <span className="text-xs font-bold text-slate-700 block">写真アルバムから選択 or 撮影</span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">自動最適化で文字認識率がアップします</span>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleScanShiftTable}
+                  disabled={!selectedImage || isScanning}
+                  className={`w-full py-3 rounded-2xl text-xs font-bold text-white flex items-center justify-center gap-2 shadow-sm transition ${
+                    !selectedImage || isScanning ? 'bg-slate-300' : 'bg-gradient-to-r from-pink-600 to-indigo-600 active:scale-98'
+                  }`}
+                >
+                  <Icons.Sparkles />
+                  <span>{isScanning ? 'AI解析・高精度分析中...' : `「${targetName}」のシフトを解析`}</span>
+                </button>
+
+                {scanMessage && <p className="text-xs text-slate-600 p-2.5 bg-slate-50 rounded-xl border border-slate-100">{scanMessage}</p>}
+
+                {scanResults.length > 0 && (
+                  <div className="border-t border-slate-100 pt-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900">抽出結果 ({scanResults.length}件)</span>
+                      <button
+                        onClick={handleApplyScan}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm transition"
+                      >
+                        カレンダーに登録
+                      </button>
+                    </div>
+
+                    <div className="divide-y divide-slate-100 max-h-36 overflow-y-auto">
+                      {scanResults.map((item, idx) => (
+                        <div key={item.id} className="py-1.5 flex items-center justify-between text-xs">
+                          <span className="font-bold">{item.date.slice(5)}</span>
+                          <span className="font-bold text-indigo-600">{item.shiftName}</span>
+                          {item.paidLeaveHours > 0 ? (
+                            <span className="text-pink-600 font-bold">有休{item.paidLeaveHours}h</span>
+                          ) : (
+                            <span className="text-slate-500">{item.startTime}-{item.endTime}</span>
+                          )}
+                          <button
+                            onClick={() => setScanResults(prev => prev.filter((_, i) => i !== idx))}
+                            className="text-slate-400 hover:text-rose-500 p-1"
+                          ><Icons.Trash /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ========== TAB: 設定（シフトパターン自由追加・編集） ========== */}
+            {activeTab === 'settings' && (
+              <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 space-y-4 overflow-y-auto no-scrollbar">
+                <h2 className="text-base font-bold text-slate-900">有給・労働時間・シフト設定</h2>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">1日の所定労働時間 (有休1日の時間数)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={workHoursPerDay}
+                      onChange={(e) => setWorkHoursPerDay(Number(e.target.value))}
+                      className="w-24 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                    />
+                    <span className="text-xs font-bold text-slate-600">時間 / 日</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">現在の保有日数</label>
+                    <input
+                      type="number"
+                      value={basePaidLeaveDays}
+                      onChange={(e) => setBasePaidLeaveDays(Number(e.target.value))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">年次付与日数</label>
+                    <input
+                      type="number"
+                      value={grantAmountDays}
+                      onChange={(e) => setGrantAmountDays(Number(e.target.value))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* 🌟 シフトパターンの自由追加・編集セクション */}
+                <div className="pt-2 border-t border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800">シフトパターンの追加・編集</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newId = `pat-${Date.now()}`;
+                        setShiftPatterns(prev => [
+                          ...prev,
+                          { id: newId, name: '新シフト', symbol: '新', startTime: '10:00', endTime: '19:00', breakTime: 60, paidLeaveHours: 0, color: '#4F46E5', bgColor: '#EEF2FF' }
+                        ]);
+                      }}
+                      className="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition"
+                    >
+                      <Icons.Plus /> <span>パターン追加</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    {shiftPatterns.map((pat, idx) => (
+                      <div key={pat.id} className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={pat.name}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setShiftPatterns(prev => prev.map((p, i) => i === idx ? { ...p, name: val } : p));
+                          }}
+                          className="w-20 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold"
+                          placeholder="シフト名"
+                        />
+                        <div className="flex items-center gap-1 text-xs">
+                          <input
+                            type="time"
+                            value={pat.startTime}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setShiftPatterns(prev => prev.map((p, i) => i === idx ? { ...p, startTime: val } : p));
+                            }}
+                            className="bg-white border border-slate-200 rounded-md px-1 py-0.5 text-[11px]"
+                          />
+                          <span>〜</span>
+                          <input
+                            type="time"
+                            value={pat.endTime}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setShiftPatterns(prev => prev.map((p, i) => i === idx ? { ...p, endTime: val } : p));
+                            }}
+                            className="bg-white border border-slate-200 rounded-md px-1 py-0.5 text-[11px]"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShiftPatterns(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-slate-400 hover:text-rose-600 p-1 ml-auto"
+                        >
+                          <Icons.Trash />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <label className="text-xs font-bold text-slate-700 block mb-1">シフト表内のあなたの名前</label>
+                  <input
+                    type="text"
+                    value={targetName}
+                    onChange={(e) => setTargetName(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                  />
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* シフト編集モーダル（Google / Appleカレンダー同期選択ボタン付き） */}
+          {isModalOpen && editingShift && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+              <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-sm p-5 space-y-3.5 max-h-[85vh] overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900">シフトの編集・追加</h3>
+                  <button onClick={() => setIsModalOpen(false)} className="text-slate-400 p-1"><Icons.Close /></button>
+                </div>
+
+                <input
+                  type="date"
+                  value={editingShift.date}
+                  onChange={(e) => setEditingShift(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold"
+                />
+
+                {/* 登録されているすべてのシフトパターンからワンタップ選択 */}
+                <div className="grid grid-cols-3 gap-1.5 max-h-32 overflow-y-auto p-1 bg-slate-50 rounded-xl">
+                  {shiftPatterns.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setEditingShift(prev => ({
+                        ...prev,
+                        shiftName: p.name,
+                        startTime: p.startTime,
+                        endTime: p.endTime,
+                        breakTime: p.breakTime,
+                        paidLeaveHours: p.paidLeaveHours || 0,
+                        color: p.color,
+                        bgColor: p.bgColor
+                      }))}
+                      className={`py-2 rounded-xl text-xs font-bold border transition truncate px-1 ${
+                        editingShift.shiftName === p.name ? 'border-pink-600 bg-pink-50 text-pink-600 shadow-2xs' : 'border-slate-200 bg-white text-slate-700'
+                      }`}
+                    >{p.name}</button>
+                  ))}
+                </div>
+
+                {/* 有給消費設定 */}
+                <div className="bg-pink-50/60 p-3 rounded-2xl border border-pink-100">
+                  <div className="flex justify-between text-xs font-bold text-slate-800 mb-2">
+                    <span>有給休暇の消費</span>
+                    <span className="text-pink-600 font-extrabold">{editingShift.paidLeaveHours || 0} 時間</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2, 4, 8].map(h => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setEditingShift(prev => ({ ...prev, paidLeaveHours: h }))}
+                        className={`flex-1 py-1.5 rounded-xl text-xs font-bold border transition ${
+                          editingShift.paidLeaveHours === h ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-slate-600 border-slate-200'
+                        }`}
+                      >{h === 0 ? 'なし' : `${h}h`}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {editingShift.paidLeaveHours < workHoursPerDay && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="time"
+                      value={editingShift.startTime}
+                      onChange={(e) => setEditingShift(prev => ({ ...prev, startTime: e.target.value }))}
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                    />
+                    <input
+                      type="time"
+                      value={editingShift.endTime}
+                      onChange={(e) => setEditingShift(prev => ({ ...prev, endTime: e.target.value }))}
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >キャンセル</button>
+                  <button
+                    onClick={() => {
+                      setShifts(prev => [...prev.filter(s => s.date !== editingShift.date), { ...editingShift, id: editingShift.id || `s-${Date.now()}` }]);
+                      setIsModalOpen(false);
+                      showToast('シフトを保存しました', 'success');
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold shadow-sm transition"
+                  >保存</button>
+                </div>
+
+                {/* カレンダー同期選択ボタン */}
+                {editingShift.date && (
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => openCalendarSync(editingShift, 'google')}
+                      className="py-2 px-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center gap-1 transition border border-blue-100 truncate"
+                    >
+                      <Icons.ExternalLink />
+                      <span>Googleカレンダー</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openCalendarSync(editingShift, 'apple')}
+                      className="py-2 px-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1 transition border border-slate-200 truncate"
+                    >
+                      <Icons.ExternalLink />
+                      <span>iPhone/Outlook</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 最下部ナビバー */}
+          <nav className="bottom-safe-area bg-white border-t border-slate-200 shrink-0 px-4 pt-2.5 flex justify-around shadow-lg z-20">
+            <button
+              onClick={() => setActiveTab('calendar')}
+              className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'calendar' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}
+            >
+              <Icons.Calendar />
+              <span className="text-[10px]">カレンダー</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('scan')}
+              className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'scan' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}
+            >
+              <Icons.Camera />
+              <span className="text-[10px]">写真スキャン</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'settings' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}
+            >
+              <Icons.Settings />
+              <span className="text-[10px]">設定</span>
+            </button>
+          </nav>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>ge/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23ec4899'/><path d='M30 25h40v50H30z' fill='none' stroke='white' stroke-width='6'/><path d='M30 40h40M45 20v10M55 20v10' stroke='white' stroke-width='6' stroke-linecap='round'/><circle cx='50' cy='58' r='7' fill='white'/></svg>" />
 
   <!-- Tailwind CSS & React / Babel -->
   <script src="https://cdn.tailwindcss.com"></script>
