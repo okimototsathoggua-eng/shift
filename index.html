@@ -29,17 +29,16 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background-color: #f1f5f9;
+      background-color: #f8fafc;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
     }
     
-    /* 上部・下部にゆったりとした安全な余白を確保 */
     .top-safe-area {
-      padding-top: max(16px, env(safe-area-inset-top));
+      padding-top: max(14px, env(safe-area-inset-top));
     }
     .bottom-safe-area {
-      padding-bottom: max(16px, env(safe-area-inset-bottom));
+      padding-bottom: max(14px, env(safe-area-inset-bottom));
     }
 
     .no-scrollbar::-webkit-scrollbar {
@@ -51,9 +50,8 @@
     }
   </style>
 </head>
-<body class="h-full w-full font-sans antialiased text-slate-800 bg-slate-200 flex items-center justify-center">
-  <!-- スマホフレームサイズ制限 (PCでもスマホ同様に表示) -->
-  <div id="root" class="h-full w-full max-w-md bg-slate-50 flex flex-col shadow-2xl overflow-hidden relative"></div>
+<body class="h-full w-full font-sans antialiased text-slate-800 bg-slate-100">
+  <div id="root" class="h-full w-full"></div>
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
@@ -68,11 +66,10 @@
       Palmtree: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,
       Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"/></svg>,
       Download: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>,
-      ExternalLink: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>,
       Close: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>,
       Sparkles: () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clipRule="evenodd"/></svg>,
       Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
-      Folder: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/></svg>,
+      ExternalLink: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>,
     };
 
     const DEFAULT_SHIFT_PATTERNS = [
@@ -127,7 +124,6 @@
       const [isModalOpen, setIsModalOpen] = useState(false);
 
       const fileInputRef = useRef(null);
-      const libraryInputRef = useRef(null);
 
       const showToast = (msg, type = 'info') => {
         setToastMessage({ msg, type });
@@ -408,7 +404,7 @@
       const totalWeeks = calendarDays.length / 7;
 
       return (
-        <div className="h-full w-full flex flex-col justify-between overflow-hidden bg-slate-50">
+        <div className="h-full w-full flex flex-col justify-between overflow-hidden bg-slate-100">
           {/* トースト通知 */}
           {toastMessage && (
             <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-xl shadow-2xl text-xs font-bold text-white transition-all ${
@@ -418,8 +414,8 @@
             </div>
           )}
 
-          {/* 上部ヘッダー */}
-          <header className="top-safe-area bg-white border-b border-slate-200 px-4 pb-3 pt-3 shrink-0 flex items-center justify-between z-20 shadow-xs">
+          {/* 上部ヘッダー（上下の余白をゆったり調整） */}
+          <header className="top-safe-area bg-white border-b border-slate-200/80 px-4 pb-3.5 pt-3 shrink-0 flex items-center justify-between z-20 shadow-xs">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
@@ -436,6 +432,14 @@
 
             <div className="flex items-center gap-2">
               <button
+                onClick={handleExportICS}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 transition active:scale-95"
+                title="カレンダー同期(.ics)"
+              >
+                <Icons.Sync />
+                <span>同期</span>
+              </button>
+              <button
                 onClick={() => {
                   setEditingShift({
                     date: new Date().toISOString().slice(0, 10),
@@ -450,7 +454,7 @@
                   });
                   setIsModalOpen(true);
                 }}
-                className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+                className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
               >
                 <Icons.Plus />
                 <span>追加</span>
@@ -458,8 +462,8 @@
             </div>
           </header>
 
-          {/* メインエリア */}
-          <main className="flex-1 w-full flex flex-col px-3 py-3 overflow-hidden">
+          {/* メインエリア（全体的にゆとりを持たせた余白） */}
+          <main className="flex-1 w-full flex flex-col px-3.5 py-3 overflow-hidden">
             {activeTab === 'calendar' && (
               <div className="h-full w-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-3.5 overflow-hidden">
                 
@@ -602,64 +606,41 @@
               </div>
             )}
 
-            {/* ========== TAB: 写真スキャン（スマホファイル・ライブラリ対応） ========== */}
+            {/* ========== TAB: 写真スキャン（iPhoneの写真ライブラリ/ファイル対応） ========== */}
             {activeTab === 'scan' && (
               <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 space-y-4 overflow-y-auto no-scrollbar">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">シフト表の写真・ファイルを取り込み</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">スマホのカメラ撮影、または保存済み写真から「{targetName}」さんのシフトを自動抽出</p>
+                  <h2 className="text-base font-bold text-slate-900">シフト表の写真・ファイルを選択</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">iPhoneの写真ライブラリ、ファイルアプリ、またはカメラから選択</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  {/* カメラで撮影ボタン */}
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-pink-300 bg-pink-50/30 hover:bg-pink-50/60 text-pink-700 transition active:scale-95"
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={handleImageChange}
-                    />
-                    <div className="w-12 h-12 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center mb-2 shadow-xs">
-                      <Icons.Camera />
+                {/* iPhone対応：capture属性を外し、標準のファイルピッカーで「写真ライブラリ」を選べるように設定 */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-1 border-2 border-dashed border-pink-300 bg-pink-50/20 hover:bg-pink-50/50 rounded-3xl p-6 text-center cursor-pointer flex flex-col items-center justify-center min-h-[180px] transition"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageChange}
+                  />
+                  {selectedImage ? (
+                    <div>
+                      <img src={selectedImage} alt="選択されたシフト写真" className="max-h-44 object-contain rounded-xl mx-auto shadow-sm" />
+                      <span className="text-xs text-pink-600 font-bold block mt-2.5">タップして別の写真を選ぶ</span>
                     </div>
-                    <span className="text-xs font-bold">写真を撮影</span>
-                  </button>
-
-                  {/* スマホの写真・ファイル選択ボタン */}
-                  <button
-                    onClick={() => libraryInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-indigo-300 bg-indigo-50/30 hover:bg-indigo-50/60 text-indigo-700 transition active:scale-95"
-                  >
-                    <input
-                      ref={libraryInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageChange}
-                    />
-                    <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-2 shadow-xs">
-                      <Icons.Folder />
+                  ) : (
+                    <div>
+                      <div className="w-14 h-14 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xs">
+                        <Icons.Camera />
+                      </div>
+                      <span className="text-sm font-bold text-slate-700 block">写真フォルダから画像を選択</span>
+                      <span className="text-xs text-slate-400 block mt-1">（アルバムやファイルアプリが開きます）</span>
                     </div>
-                    <span className="text-xs font-bold">写真・ファイルを選ぶ</span>
-                  </button>
+                  )}
                 </div>
-
-                {/* プレビューエリア */}
-                {selectedImage ? (
-                  <div className="flex-1 border border-slate-200 rounded-2xl p-3 text-center bg-slate-50 flex flex-col justify-center items-center">
-                    <img src={selectedImage} alt="選択されたシフト写真" className="max-h-40 object-contain rounded-xl shadow-xs" />
-                    <span className="text-xs text-indigo-600 font-bold mt-2">選択完了 (画像データ読込済)</span>
-                  </div>
-                ) : (
-                  <div className="flex-1 border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center flex flex-col items-center justify-center text-slate-400 text-xs">
-                    ここに選択した画像が表示されます
-                  </div>
-                )}
 
                 <button
                   onClick={handleScanShiftTable}
@@ -686,7 +667,7 @@
                       </button>
                     </div>
 
-                    <div className="divide-y divide-slate-100 max-h-36 overflow-y-auto">
+                    <div className="divide-y divide-slate-100 max-h-40 overflow-y-auto">
                       {scanResults.map((item, idx) => (
                         <div key={item.id} className="py-2 flex items-center justify-between text-xs">
                           <span className="font-bold">{item.date.slice(5)}</span>
@@ -875,7 +856,7 @@
           )}
 
           {/* 最下部ナビバー */}
-          <nav className="bottom-safe-area bg-white border-t border-slate-200 shrink-0 px-4 py-2.5 flex justify-around shadow-lg z-20">
+          <nav className="bottom-safe-area bg-white border-t border-slate-200 shrink-0 px-4 pt-3 flex justify-around shadow-lg z-20">
             <button
               onClick={() => setActiveTab('calendar')}
               className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'calendar' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}
@@ -888,7 +869,7 @@
               className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'scan' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}
             >
               <Icons.Camera />
-              <span className="text-[10px]">写真・ファイル</span>
+              <span className="text-[10px]">写真選択</span>
             </button>
             <button
               onClick={() => setActiveTab('settings')}
