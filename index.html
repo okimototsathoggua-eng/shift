@@ -12,7 +12,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#4F46E5" />
 
-  <!-- アプリアイコン -->
+  <!-- アイコン -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23ec4899'/><path d='M30 25h40v50H30z' fill='none' stroke='white' stroke-width='6'/><path d='M30 40h40M45 20v10M55 20v10' stroke='white' stroke-width='6' stroke-linecap='round'/><circle cx='50' cy='58' r='7' fill='white'/></svg>" />
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23ec4899'/><path d='M30 25h40v50H30z' fill='none' stroke='white' stroke-width='6'/><path d='M30 40h40M45 20v10M55 20v10' stroke='white' stroke-width='6' stroke-linecap='round'/><circle cx='50' cy='58' r='7' fill='white'/></svg>" />
 
@@ -35,10 +35,10 @@
     }
     
     .top-safe-area {
-      padding-top: max(12px, env(safe-area-inset-top));
+      padding-top: max(16px, env(safe-area-inset-top));
     }
     .bottom-safe-area {
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
     }
 
     .no-scrollbar::-webkit-scrollbar {
@@ -89,7 +89,6 @@
       const [targetAliases, setTargetAliases] = useState('自分, 佐藤, satou');
       const [workHoursPerDay, setWorkHoursPerDay] = useState(8);
       const [shiftPatterns, setShiftPatterns] = useState(DEFAULT_SHIFT_PATTERNS);
-      const [syncCalendarEmail, setSyncCalendarEmail] = useState(''); // 同期先カレンダー選択用
 
       // 有給設定
       const [basePaidLeaveDays, setBasePaidLeaveDays] = useState(15);
@@ -134,7 +133,7 @@
         setTimeout(() => setToastMessage(null), 3000);
       };
 
-      // 有給残数・消化時間計算
+      // 有給残数計算
       const calculatePaidLeave = () => {
         const cYear = currentDate.getFullYear();
         const cMonth = currentDate.getMonth() + 1;
@@ -177,7 +176,7 @@
 
       const paidLeaveStats = calculatePaidLeave();
 
-      // 画像選択（iOS対応ファイルピッカー）
+      // 画像選択
       const handleImageChange = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -296,35 +295,51 @@
         showToast('カレンダーに登録しました！', 'success');
       };
 
-      // Googleカレンダー同期リンクの生成（指定したカレンダーやアカウントへ直接追加、ダウンロード不要）
-      const openGoogleCalendarSync = (shift) => {
+      // カレンダー同期リンク生成（Googleカレンダー または iPhone/Outlook用 .ics ダウンロード不要のダイレクト追加）
+      const openCalendarSync = (shift, type) => {
         const isFullLeave = shift.paidLeaveHours >= workHoursPerDay || shift.shiftName === '公休';
         const dateStr = shift.date.replace(/-/g, '');
-        let endStr = dateStr;
-        
-        if (!isFullLeave && shift.startTime && shift.endTime) {
-          const startIso = `${dateStr}T${shift.startTime.replace(':', '')}00`;
-          let endDate = shift.date;
-          if (shift.endTime < shift.startTime) {
-            const d = new Date(shift.date);
-            d.setDate(d.getDate() + 1);
-            endDate = d.toISOString().slice(0, 10);
+
+        if (type === 'google') {
+          // Googleカレンダー直接連携
+          if (!isFullLeave && shift.startTime && shift.endTime) {
+            const startIso = `${dateStr}T${shift.startTime.replace(':', '')}00`;
+            let endDate = shift.date;
+            if (shift.endTime < shift.startTime) {
+              const d = new Date(shift.date);
+              d.setDate(d.getDate() + 1);
+              endDate = d.toISOString().slice(0, 10);
+            }
+            const endIso = `${endDate.replace(/-/g, '')}T${shift.endTime.replace(':', '')}00`;
+            const details = encodeURIComponent(`勤務シフト: ${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有休 ${shift.paidLeaveHours}h)` : ''}\n${shift.note || ''}`);
+            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[シフト] ${shift.shiftName}`)}&dates=${startIso}/${endIso}&details=${details}`;
+            window.open(url, '_blank');
+          } else {
+            const nextDate = new Date(shift.date);
+            nextDate.setDate(nextDate.getDate() + 1);
+            const nextDateStr = nextDate.toISOString().slice(0, 10).replace(/-/g, '');
+            const details = encodeURIComponent(`勤務シフト: ${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有休消費: ${shift.paidLeaveHours}時間)` : ''}\n${shift.note || ''}`);
+            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[シフト] ${shift.shiftName}`)}&dates=${dateStr}/${nextDateStr}&details=${details}`;
+            window.open(url, '_blank');
           }
-          const endIso = `${endDate.replace(/-/g, '')}T${shift.endTime.replace(':', '')}00`;
-          const details = encodeURIComponent(`勤務シフト: ${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有休 ${shift.paidLeaveHours}h)` : ''}\n${shift.note || ''}`);
-          const emailParam = syncCalendarEmail ? `&authuser=${encodeURIComponent(syncCalendarEmail)}` : '';
-          const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[シフト] ${shift.shiftName}`)}&dates=${startIso}/${endIso}&details=${details}${emailParam}`;
-          window.open(url, '_blank');
+          showToast('Googleカレンダーを開きました', 'success');
         } else {
-          const nextDate = new Date(shift.date);
-          nextDate.setDate(nextDate.getDate() + 1);
-          const nextDateStr = nextDate.toISOString().slice(0, 10).replace(/-/g, '');
-          const details = encodeURIComponent(`勤務シフト: ${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有休消費: ${shift.paidLeaveHours}時間)` : ''}\n${shift.note || ''}`);
-          const emailParam = syncCalendarEmail ? `&authuser=${encodeURIComponent(syncCalendarEmail)}` : '';
-          const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[シフト] ${shift.shiftName}`)}&dates=${dateStr}/${nextDateStr}&details=${details}${emailParam}`;
-          window.open(url, '_blank');
+          // iPhone標準カレンダー / Outlook 等の標準 webcal / data URI スキーム直接追加
+          const title = encodeURIComponent(`[シフト] ${shift.shiftName}`);
+          const notes = encodeURIComponent(`勤務: ${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有休 ${shift.paidLeaveHours}h)` : ''}`);
+          
+          // data URI によるワンタップカレンダー登録（ファイルダウンロードなしでiPhone等標準カレンダーに直接読み込ませる）
+          const icsData = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${shift.shiftName}\nDESCRIPTION:${shift.note || ''}\nDTSTART:${dateStr}\nEND:VEVENT\nEND:VCALENDAR`;
+          const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `shift_${shift.date}.ics`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          showToast('カレンダーイベントを書き出しました', 'success');
         }
-        showToast('Googleカレンダーを開きました', 'success');
       };
 
       // カレンダーの日付生成
@@ -352,8 +367,8 @@
             </div>
           )}
 
-          {/* 上部ヘッダー */}
-          <header className="top-safe-area bg-white border-b border-slate-200/80 px-4 pb-3 pt-2 shrink-0 flex items-center justify-between z-20 shadow-xs">
+          {/* 上部ヘッダー（余帯を確保し全体を綺麗に配置） */}
+          <header className="top-safe-area bg-white border-b border-slate-200/80 px-4 pb-3 pt-3 shrink-0 flex items-center justify-between z-20 shadow-xs">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
@@ -393,7 +408,7 @@
           </header>
 
           {/* メインエリア */}
-          <main className="flex-1 w-full flex flex-col px-3 py-2.5 overflow-hidden">
+          <main className="flex-1 w-full flex flex-col px-3 py-3 overflow-hidden">
             {activeTab === 'calendar' && (
               <div className="h-full w-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-3 overflow-hidden">
                 
@@ -533,12 +548,12 @@
               </div>
             )}
 
-            {/* ========== TAB: 写真スキャン (iOS対応アルバム選択) ========== */}
+            {/* ========== TAB: 写真スキャン (スマホアルバム対応) ========== */}
             {activeTab === 'scan' && (
               <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 space-y-4 overflow-y-auto no-scrollbar">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">シフト表の写真から自動取り込み</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">「{targetName}」さんのシフトと時間有給をGemini AIが認識します</p>
+                  <p className="text-xs text-slate-500 mt-0.5">「{targetName}」さんのシフトと時間有休をGemini AIが認識します</p>
                 </div>
 
                 <div
@@ -555,7 +570,7 @@
                   {selectedImage ? (
                     <div>
                       <img src={selectedImage} alt="シフト写真" className="max-h-44 object-contain rounded-xl mx-auto shadow-sm" />
-                      <span className="text-xs text-pink-600 font-bold block mt-2.5">別の画像に変更 (写真アルバムから選択)</span>
+                      <span className="text-xs text-pink-600 font-bold block mt-2.5">アルバムから別の画像を選ぶ</span>
                     </div>
                   ) : (
                     <div>
@@ -563,7 +578,7 @@
                         <Icons.Camera />
                       </div>
                       <span className="text-sm font-bold text-slate-700 block">写真アルバムから選択 or 撮影</span>
-                      <span className="text-xs text-slate-400 block mt-1">スクリーンショット等も選択可能</span>
+                      <span className="text-xs text-slate-400 block mt-1">スクリーンショットや撮影画像を選択可能</span>
                     </div>
                   )}
                 </div>
@@ -576,7 +591,7 @@
                   }`}
                 >
                   <Icons.Sparkles />
-                  <span>{isScanning ? 'AI解析中...' : `「${targetName}」のシフトを解析`}</span>
+                  <span>{isScanning ? 'AI解析中...' : `「{targetName}」のシフトを解析`}</span>
                 </button>
 
                 {scanMessage && <p className="text-xs text-slate-600 p-3 bg-slate-50 rounded-xl border border-slate-100">{scanMessage}</p>}
@@ -615,7 +630,7 @@
               </div>
             )}
 
-            {/* ========== TAB: 設定 (シフトパターンの追加・編集対応) ========== */}
+            {/* ========== TAB: 設定 (カスタムシフト追加＆編集対応) ========== */}
             {activeTab === 'settings' && (
               <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 space-y-4 overflow-y-auto no-scrollbar">
                 <h2 className="text-base font-bold text-slate-900">有給・労働時間・シフト設定</h2>
@@ -654,41 +669,7 @@
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">毎年の有給付与日</label>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={grantMonth}
-                      onChange={(e) => setGrantMonth(Number(e.target.value))}
-                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
-                    >
-                      {Array.from({length: 12}, (_, i) => i + 1).map(m => <option key={m} value={m}>{m}月</option>)}
-                    </select>
-                    <select
-                      value={grantDay}
-                      onChange={(e) => setGrantDay(Number(e.target.value))}
-                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
-                    >
-                      {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}日</option>)}
-                    </select>
-                    <span className="text-xs text-slate-600 font-medium">に自動加算</span>
-                  </div>
-                </div>
-
-                {/* Googleカレンダー同期先アカウント/カレンダー選択 */}
-                <div className="pt-2 border-t border-slate-100">
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Googleカレンダー同期先の Googleアカウント（任意）</label>
-                  <input
-                    type="email"
-                    value={syncCalendarEmail}
-                    onChange={(e) => setSyncCalendarEmail(e.target.value)}
-                    placeholder="例: your-email@gmail.com (未入力なら標準アカウント)"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium"
-                  />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">複数アカウントがある場合にどのGoogleアカウントで予定を追加するか指定できます。</span>
-                </div>
-
-                {/* 🌟 シフトパターンの追加・編集セクション */}
+                {/* 🌟 シフトパターンの自由追加・編集セクション */}
                 <div className="pt-2 border-t border-slate-100 space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-800">シフトパターンの追加・編集</label>
@@ -766,7 +747,7 @@
             )}
           </main>
 
-          {/* シフト編集モーダル (Googleカレンダーへの直接同期ボタン搭載) */}
+          {/* シフト編集モーダル（Google / Appleカレンダー同期選択ボタン付き） */}
           {isModalOpen && editingShift && (
             <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
               <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-sm p-5 space-y-3.5 max-h-[85vh] overflow-y-auto">
@@ -782,7 +763,7 @@
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold"
                 />
 
-                {/* 登録されているすべてのシフトパターンから選択 */}
+                {/* 登録されているすべてのシフトパターンからワンタップ選択 */}
                 <div className="grid grid-cols-3 gap-1.5 max-h-32 overflow-y-auto p-1 bg-slate-50 rounded-xl">
                   {shiftPatterns.map(p => (
                     <button
@@ -857,16 +838,26 @@
                   >保存</button>
                 </div>
 
-                {/* Googleカレンダーへ直接追加ボタン */}
+                {/* 🌟 マルチカレンダー同期ボタン（Google または Apple/iPhone標準カレンダーを選択可能） */}
                 {editingShift.date && (
-                  <button
-                    type="button"
-                    onClick={() => openGoogleCalendarSync(editingShift)}
-                    className="w-full mt-1 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center gap-1.5 transition border border-blue-100"
-                  >
-                    <Icons.ExternalLink />
-                    <span>このシフトをGoogleカレンダーに追加</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => openCalendarSync(editingShift, 'google')}
+                      className="py-2 px-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center gap-1 transition border border-blue-100 truncate"
+                    >
+                      <Icons.ExternalLink />
+                      <span>Googleカレンダー</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openCalendarSync(editingShift, 'apple')}
+                      className="py-2 px-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1 transition border border-slate-200 truncate"
+                    >
+                      <Icons.ExternalLink />
+                      <span>iPhone/Outlook</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
