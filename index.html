@@ -1,1 +1,902 @@
 
+<!DOCTYPE html>
+<html lang="ja" class="h-full w-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>ShiftSnap - 勤務シフト＆有給管理</title>
+
+  <!-- PWA & フルスクリーン設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ShiftSnap" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#4F46E5" />
+
+  <!-- アプリアイコン（PWAインストール時・ホーム画面表示に使用／base64で埋め込み・単一ファイル化） -->
+  <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAEKElEQVR4nO3c2VXbUABFUdkrHYSiSCOhJtJIKIrUQD6yIMZ40PAGSXfv7yzwxz1+slF0GFbm9fH5rfdroJ6Hl6dD79dwquuLMXaGoW8UzX+x0XNL6xia/TLDZ4pWIVT/JYbPErVDqPbDDZ+SaoVQ/IcaPjWVDuFY8ocZP7WV3liRmgyfHkqcBotPAOOnlxLbWxSA8dPb0g3ODsD4WYslW5wVgPGzNnM3OTkA42et5mxzUgDGz9pN3ejoAIyfrZiy1VEBGD9bM3azdwMwfrZqzHaL3goBW3MzAO/+bN29DV8NwPjZi1tbdglEtIsBePdnb65t2glAtC8BePdnry5t2wlAtE8BePdn78437gQg2kcA3v1Jcbp1JwDRBEC04zC4/CHP++adAEQTANG+9X4Be/D998/R//bPj1/Nfhb3OQGIdvQBmFSvj89vTgCiCYBoAiCaAIgmAKIJgGgCIJoAiCYAogmAaAIg2iHhXqApd1jyX8Ldpk4AogmAaAIgmgCIJgCiCYBoAiCaAIgmAKIJgGgejHVm73/+d1vIZ04AogmAaAIgmgCIJgCiCYBoAiCavwOc8T15FicA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDS3QpzxXyKzOAGIJgCiCYBoAiCaAIgmAKIJgGgCIJoAiCYAogmAaAIgmgCIJgCiCYBoAiCaAIgmAKIJgGgCIJoAiCYAogmAaAIgmgdjdXDt4VR7fyjXGgmgkTFPZDv9N2JowyVQA3MeR+gRhm0IoLIlQxZBfQKoqMSARVCXACopOVwR1COACmoMVgR1CIBoAiCaAAqreaniMqg8ARBNAEQTANEEQDQBEE0AhdW8i9MdouUJgGgCIJoAKqhxqeLypw4BVFJysMZfjwAqKjFc469LAJUtGbDx1yeABuYM2fjb8FSIRk4H7bEo6yGADgx9PVwCEU0ARBMA0QRANAEQTQBE8zXoGU9eyOIEIJoAiCYAogmAaAIgmgCIJgCiCYBoAiCaAIgWcSuE/4HFNU4AogmAaAIgmgCIJgCiCYBoAiCaAIgmAKIJgGjHh5enQ+8XAT08vDwdnABEEwDRBEA0ARDtOAz/Pgz0fiHQ0vvmnQBEEwDRPgJwGUSK0607AYj2KQCnAHt3vnEnANG+BOAUYK8ubdsJQLSLATgF2Jtrm3YCEO1qAE4B9uLWlm+eACJg6+5t2CUQ0e4G4BRgq8Zsd9QJIAK2ZuxmR18CiYCtmLLVSZ8BRMDaTd3o5A/BImCt5mxz1rdAImBt5m5y9tegImAtlmxx0d8BREBvSze4+A9hIqCXEtsrOt7Xx+e3kj8PLin5plv0VginAbWV3li1wToNKKnWm2v1d2whsETtq4pmlyxCYIpWl9PNr9mFwC2tP0d2/dAqBoah75cnq/vWRhT7trZvCv8CjvUVYAwBVM4AAAAASUVORK5CYII=" type="image/png" />
+  <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAEKElEQVR4nO3c2VXbUABFUdkrHYSiSCOhJtJIKIrUQD6yIMZ40PAGSXfv7yzwxz1+slF0GFbm9fH5rfdroJ6Hl6dD79dwquuLMXaGoW8UzX+x0XNL6xia/TLDZ4pWIVT/JYbPErVDqPbDDZ+SaoVQ/IcaPjWVDuFY8ocZP7WV3liRmgyfHkqcBotPAOOnlxLbWxSA8dPb0g3ODsD4WYslW5wVgPGzNnM3OTkA42et5mxzUgDGz9pN3ejoAIyfrZiy1VEBGD9bM3azdwMwfrZqzHaL3goBW3MzAO/+bN29DV8NwPjZi1tbdglEtIsBePdnb65t2glAtC8BePdnry5t2wlAtE8BePdn78437gQg2kcA3v1Jcbp1JwDRBEC04zC4/CHP++adAEQTANG+9X4Be/D998/R//bPj1/Nfhb3OQGIdvQBmFSvj89vTgCiCYBoAiCaAIgmAKIJgGgCIJoAiCYAogmAaAIg2iHhXqApd1jyX8Ldpk4AogmAaAIgmgCIJgCiCYBoAiCaAIgmAKIJgGgejHVm73/+d1vIZ04AogmAaAIgmgCIJgCiCYBoAiCavwOc8T15FicA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDS3QpzxXyKzOAGIJgCiCYBoAiCaAIgmAKIJgGgCIJoAiCYAogmAaAIgmgCIJgCiCYBoAiCaAIgmAKIJgGgCIJoAiCYAogmAaAIgmgdjdXDt4VR7fyjXGgmgkTFPZDv9N2JowyVQA3MeR+gRhm0IoLIlQxZBfQKoqMSARVCXACopOVwR1COACmoMVgR1CIBoAiCaAAqreaniMqg8ARBNAEQTANEEQDQBEE0AhdW8i9MdouUJgGgCIJoAKqhxqeLypw4BVFJysMZfjwAqKjFc469LAJUtGbDx1yeABuYM2fjb8FSIRk4H7bEo6yGADgx9PVwCEU0ARBMA0QRANAEQTQBE8zXoGU9eyOIEIJoAiCYAogmAaAIgmgCIJgCiCYBoAiCaAIgWcSuE/4HFNU4AogmAaAIgmgCIJgCiCYBoAiCaAIgmAKIJgGjHh5enQ+8XAT08vDwdnABEEwDRBEA0ARDtOAz/Pgz0fiHQ0vvmnQBEEwDRPgJwGUSK0607AYj2KQCnAHt3vnEnANG+BOAUYK8ubdsJQLSLATgF2Jtrm3YCEO1qAE4B9uLWlm+eACJg6+5t2CUQ0e4G4BRgq8Zsd9QJIAK2ZuxmR18CiYCtmLLVSZ8BRMDaTd3o5A/BImCt5mxz1rdAImBt5m5y9tegImAtlmxx0d8BREBvSze4+A9hIqCXEtsrOt7Xx+e3kj8PLin5plv0VginAbWV3li1wToNKKnWm2v1d2whsETtq4pmlyxCYIpWl9PNr9mFwC2tP0d2/dAqBoah75cnq/vWRhT7trZvCv8CjvUVYAwBVM4AAAAASUVORK5CYII=" />
+
+  <!-- PWA マニフェスト（ホーム画面へのインストール・アプリらしい全画面表示に必要／base64で埋め込み・単一ファイル化） -->
+  <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiU2hpZnRTbmFwIC0g5Yuk5YuZ44K344OV44OI77yG5pyJ57Wm566h55CGIiwic2hvcnRfbmFtZSI6IlNoaWZ0U25hcCIsImRlc2NyaXB0aW9uIjoi5Yuk5YuZ44K344OV44OI44Go5pyJ57Wm5LyR5pqH44KS566h55CG44GZ44KL44Ki44OX44OqIiwic3RhcnRfdXJsIjoiLi8iLCJzY29wZSI6Ii4vIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJvcmllbnRhdGlvbiI6InBvcnRyYWl0IiwiYmFja2dyb3VuZF9jb2xvciI6IiNmOGZhZmMiLCJ0aGVtZV9jb2xvciI6IiM0RjQ2RTUiLCJsYW5nIjoiamEiLCJpY29ucyI6W3sic3JjIjoiZGF0YTppbWFnZS9wbmc7YmFzZTY0LGlWQk9SdzBLR2dvQUFBQU5TVWhFVWdBQUFNQUFBQURBQ0FZQUFBQlMzR3dIQUFBRUtFbEVRVlI0bk8zYzJWWGJVQUJGVWRrckhZU2lTQ09oSnRKSUtJclVRRDZ5SU1aNDBQQUdTWGZ2N3l6d3h6MStzbEYwR0ZibTlmSDVyZmRyb0o2SGw2ZEQ3OWR3cXV1TE1YYUdvVzhVelgreDBYTkw2eGlhL1RMRFo0cFdJVlQvSlliUEVyVkRxUGJERForU2FvVlEvSWNhUGpXVkR1Rlk4b2NaUDdXVjNsaVJtZ3lmSGtxY0JvdFBBT09ubHhMYld4U0E4ZFBiMGczT0RzRDRXWXNsVzV3VmdQR3pObk0zT1RrQTQyZXQ1bXh6VWdER3o5cE4zZWpvQUl5ZnJaaXkxVkVCR0Q5Yk0zYXpkd013ZnJacXpIYUwzZ29CVzNNekFPLytiTjI5RFY4TndQalppMXRiZGdsRXRJc0JlUGRuYjY1dDJnbEF0QzhCZVBkbnJ5NXQyd2xBdEU4QmVQZG43ODQzN2dRZzJrY0EzdjFKY2JwMUp3RFJCRUMwNHpDNC9DSFArK2FkQUVRVEFORys5WDRCZS9EOTk4L1IvL2JQajEvTmZoYjNPUUdJZHZRQm1GU3ZqODl2VGdDaUNZQm9BaUNhQUlnbUFLSUpnR2dDSUpvQWlDWUFvZ21BYUFJZzJpSGhYcUFwZDFqeVg4TGRwazRBb2dtQWFBSWdtZ0NJSmdDaUNZQm9BaUNhQUlnbUFLSUpnR2dlakhWbTczLytkMXZJWjA0QW9nbUFhQUlnbWdDSUpnQ2lDWUJvQWlDYXZ3T2M4VDE1RmljQTBRUkFOQUVRVFFCRUV3RFJCRUEwQVJCTkFFUVRBTkVFUURTM1FwenhYeUt6T0FHSUpnQ2lDWUJvQWlDYUFJZ21BS0lKZ0dnQ0lKb0FpQ1lBb2dtQWFBSWdtZ0NJSmdDaUNZQm9BaUNhQUlnbUFLSUpnR2dDSUpvQWlDWUFvZ21BYUFJZ21nZGpkWER0NFZSN2Z5alhHZ21na1RGUFpEdjlOMkpvd3lWUUEzTWVSK2dSaG0wSW9MSWxReFpCZlFLb3FNU0FSVkNYQUNvcE9Wd1IxQ09BQ21vTVZnUjFDSUJvQWlDYUFBcXJlYW5pTXFnOEFSQk5BRVFUQU5FRVFEUUJFRTBBaGRXOGk5TWRvdVVKZ0dnQ0lKb0FLcWh4cWVMeXB3NEJWRkp5c01aZmp3QXFLakZjNDY5TEFKVXRHYkR4MXllQUJ1WU0yZmpiOEZTSVJrNEg3YkVvNnlHQURneDlQVndDRVUwQVJCTUEwUVJBTkFFUVRRQkU4elhvR1U5ZXlPSUVJSm9BaUNZQW9nbUFhQUlnbWdDSUpnQ2lDWUJvQWlDYUFJZ1djU3VFLzRIRk5VNEFvZ21BYUFJZ21nQ0lKZ0NpQ1lCb0FpQ2FBSWdtQUtJSmdHakhoNWVuUSs4WEFUMDh2RHdkbkFCRUV3RFJCRUEwQVJEdE9Bei9QZ3owZmlIUTB2dm1uUUJFRXdEUlBnSndHVVNLMDYwN0FZajJLUUNuQUh0M3ZuRW5BTkcrQk9BVVlLOHViZHNKUUxTTEFUZ0YySnRybTNZQ0VPMXFBRTRCOXVMV2xtK2VBQ0pnNis1dDJDVVEwZTRHNEJSZ3E4WnNkOVFKSUFLMlp1eG1SMThDaVlDdG1MTFZTWjhCUk1EYVRkM281QS9CSW1DdDVteHoxcmRBSW1CdDVtNXk5dGVnSW1BdGxteHgwZDhCUkVCdlN6ZTQrQTloSXFDWEV0c3JPdDdYeCtlM2tqOFBMaW41cGx2MFZnaW5BYldWM2xpMXdUb05LS25XbTJ2MWQyd2hzRVR0cTRwbWx5eENZSXBXbDlQTnI5bUZ3QzJ0UDBkMi9kQXFCb2FoNzVjbnEvdldSaFQ3dHJadkN2OENqdlVWWUF3QlZNNEFBQUFBU1VWT1JLNUNZSUk9Iiwic2l6ZXMiOiIxOTJ4MTkyIiwidHlwZSI6ImltYWdlL3BuZyIsInB1cnBvc2UiOiJhbnkifSx7InNyYyI6ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBTUFBQUFEQUNBWUFBQUJTM0d3SEFBQUVLRWxFUVZSNG5PM2MyVlhiVUFCRlVka3JIWVNpU0NPaEp0SklLSXJVUUQ2eUlNWjQwUEFHU1hmdjd5end4ejErc2xGMEdGYm05Zkg1cmZkcm9KNkhsNmRENzlkd3F1dUxNWGFHb1c4VXpYK3gwWE5MNnhpYS9UTERaNHBXSVZUL0pZYlBFclZEcVBiRERaK1Nhb1ZRL0ljYVBqV1ZEdUZZOG9jWlA3V1YzbGlSbWd5ZkhrcWNCb3RQQU9Pbmx4TGJXeFNBOGRQYjBnM09Ec0Q0V1lzbFc1d1ZnUEd6Tm5NM09Ua0E0MmV0NW14elVnREd6OXBOM2Vqb0FJeWZyWml5MVZFQkdEOWJNM2F6ZHdNd2ZyWnF6SGFMM2dvQlczTXpBTy8rYk4yOURWOE53UGpaaTF0YmRnbEV0SXNCZVBkbmI2NXQyZ2xBdEM4QmVQZG5yeTV0MndsQXRFOEJlUGRuNzg0MzdnUWcya2NBM3YxSmNicDFKd0RSQkVDMDR6QzQvQ0hQKythZEFFUVRBTkcrOVg0QmUvRDk5OC9SLy9iUGoxL05maGIzT1FHSWR2UUJtRlN2ajg5dlRnQ2lDWUJvQWlDYUFJZ21BS0lKZ0dnQ0lKb0FpQ1lBb2dtQWFBSWcyaUhoWHFBcGQxanlYOExkcGs0QW9nbUFhQUlnbWdDSUpnQ2lDWUJvQWlDYUFJZ21BS0lKZ0dnZWpIVm03My8rZDF2SVowNEFvZ21BYUFJZ21nQ0lKZ0NpQ1lCb0FpQ2F2d09jOFQxNUZpY0EwUVJBTkFFUVRRQkVFd0RSQkVBMEFSQk5BRVFUQU5FRVFEUzNRcHp4WHlLek9BR0lKZ0NpQ1lCb0FpQ2FBSWdtQUtJSmdHZ0NJSm9BaUNZQW9nbUFhQUlnbWdDSUpnQ2lDWUJvQWlDYUFJZ21BS0lKZ0dnQ0lKb0FpQ1lBb2dtQWFBSWdtZ2RqZFhEdDRWUjdmeWpYR2dtZ2tURlBaRHY5TjJKb3d5VlFBM01lUitnUmhtMElvTElsUXhaQmZRS29xTVNBUlZDWEFDb3BPVndSMUNPQUNtb01WZ1IxQ0lCb0FpQ2FBQXFyZWFuaU1xZzhBUkJOQUVRVEFORUVRRFFCRUUwQWhkVzhpOU1kb3VVSmdHZ0NJSm9BS3FoeHFlTHlwdzRCVkZKeXNNWmZqd0FxS2pGYzQ2OUxBSlV0R2JEeDF5ZUFCdVlNMmZqYjhGU0lSazRIN2JFbzZ5R0FEZ3g5UFZ3Q0VVMEFSQk1BMFFSQU5BRVFUUUJFOHpYb0dVOWV5T0lFSUpvQWlDWUFvZ21BYUFJZ21nQ0lKZ0NpQ1lCb0FpQ2FBSWdXY1N1RS80SEZOVTRBb2dtQWFBSWdtZ0NJSmdDaUNZQm9BaUNhQUlnbUFLSUpnR2pIaDVlblErOFhBVDA4dkR3ZG5BQkVFd0RSQkVBMEFSRHRPQXovUGd6MGZpSFEwdnZtblFCRUV3RFJQZ0p3R1VTSzA2MDdBWWoyS1FDbkFIdDN2bkVuQU5HK0JPQVVZSzh1YmRzSlFMU0xBVGdGMkp0cm0zWUNFTzFxQUU0Qjl1TFdsbStlQUNKZzYrNXQyQ1VRMGU0RzRCUmdxOFpzZDlRSklBSzJadXhtUjE4Q2lZQ3RtTExWU1o4QlJNRGFUZDNvNUEvQkltQ3Q1bXh6MXJkQUltQnQ1bTV5OXRlZ0ltQXRsbXh4MGQ4QlJFQnZTemU0K0E5aElxQ1hFdHNyT3Q3WHgrZTNrajhQTGluNXBsdjBWZ2luQWJXVjNsaTF3VG9OS0tuV20ydjFkMndoc0VUdHE0cG1seXhDWUlwV2w5UE5yOW1Gd0MydFAwZDIvZEFxQm9haDc1Y25xL3ZXUmhUN3RyWnZDdjhDanZVVllBd0JWTTRBQUFBQVNVVk9SSzVDWUlJPSIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmciLCJwdXJwb3NlIjoibWFza2FibGUifSx7InNyYyI6ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBZ0FBQUFJQUNBWUFBQUQwZU5UNkFBQU5zMGxFUVZSNG5PM2N6WFVVeVJhRjBZUWxENFJSeUJGaEUzSkVHSVZzb0FkYVJSY2dsZW9uTStQZU9IdVAzMnN5UTRQelZaVGcwMEpKUDc5Ky96WDZHUURXOE9YSHQwK2puNEYvK2FFTVl1QUJYZ21FTVJ6NkRvdzl3R1ZFd2ZZYzhBWU1Qc0M2Qk1INkhPZ0tERDdBdmdUQjdSemdsWXcrUUExaTREb083UUpHSDZBMk1YQStCL1VCb3cvUWt4ZzR6ZUc4dy9BRHpFRUl2TTJoSERINkFITVRBLzl6RUl2aEIwZ2pCTUlEd1BBRFpFc09nY2dYTi93QUhFc01nYWdYTnZ3QW5KSVVBaEV2YXZnQnVFUkNDSHdlL1FCYk0vNEFYQ3BoTzZZdG5JUWZIZ0RibS9VMllMcVhNdndBYkdHMkVKanFLd0RqRDhCV1p0dVlLV3BtdGg4S0FMWE5jQnZRL2diQStBT3d0eG0ycDNVQXpQQURBS0NuN2h2VThncWorNkVETUplT1h3bTB1d0V3L2dCVTAzR2JXZ1ZBeHdNR0lFTzNqV3B4WmRIdFVBSEkxdUVyZ2ZJM0FNWWZnRzQ2YkZmcEFPaHdnQUR3bHVvYlZqWUFxaDhjQUh5azhwYVZESURLQndZQWw2aTZhZVVDb09wQkFjQzFLbTVicVFDb2VFQUFzSVpxRzFjbUFLb2REQUNzcmRMV2xRaUFTZ2NDQUZ1cXNubkRBNkRLUVFEQVhpcHMzOUFBcUhBQUFEREM2QTBjRmdDalh4d0FSaHU1aFVNQ3dQZ0R3S3RSbTdoN0FCaC9BUGpUaUczY05RQ01Qd0M4YmUrTjNDMEFqRDhBbkxiblZ1NFNBTVlmQU02ejEyWU8vM2NBQUlEOWJSNEFQdjBEd0dYMjJNNU5BOEQ0QThCMXR0N1F6UUxBK0FQQWJiYmNVcjhEQUFDQk5na0FuLzRCWUIxYmJlcnFBV0Q4QVdCZFcyenJxZ0ZnL0FGZ0cydHZyTjhCQUlCQXF3V0FULzhBc0swMXQzYVZBREQrQUxDUHRUYlhWd0FBRU9qbUFQRHBId0QydGNiMnVnRUFnRUEzQllCUC93QXd4cTBiZkhVQUdIOEFHT3VXTGZZVkFBQUV1aW9BZlBvSGdCcXUzV1EzQUFBUTZPSUE4T2tmQUdxNVpwdmRBQUJBb0lzQ3dLZC9BS2pwMG8xMkF3QUFnYzRPQUovK0FhQzJTN2JhRFFBQUJEb3JBSHo2QjRBZXp0MXNOd0FBRUVnQUFFQ2dEd1BBOVQ4QTlITE9kcnNCQUlCQUp3UEFwMzhBNk9takRYY0RBQUNCQkFBQUJIbzNBRnovQTBCdnA3YmNEUUFBQkJJQUFCRG96UUJ3L1E4QWMzaHYwOTBBQUVBZ0FRQUFnZjRKQU5mL0FEQ1h0N2JkRFFBQUJCSUFBQkJJQUFCQW9EOEN3UGYvQURDbnZ6ZmVEUUFBQkJJQUFCQklBQUJBb044QjRQdC9BSmpiOGRhN0FRQ0FRQUlBQUFMZGpYNEFtTm45OCtPUVAvZmw0V24xLytaTTd3SzRBUUNBU0orWHhTOEFBa0NLdythN0FRQ0FRQUlBQUFJSkFBQUlKQUFBSUpBQUFJQkFBZ0FBQWdrQUFBajAyYjhCQUFCWmZuNzkvc3NOQUFBRUVnQUFFRWdBQUVBZ0FRQUFnUVFBQUFRU0FBQVFTQUFBUUNBQkFBQ0JCQUFBQkJJQUFCQklBQUJBSUFFQUFJRUVBQUFFRWdBQUVFZ0FBRUFnQVFBQWdRUUFBQVFTQUFBUVNBQUFRQ0FCQUFDQkJBQUFCQklBQUJCSUFBQkFJQUVBQUlFRUFBQUUrdlR6Ni9kZm94K0N1ZDAvUDQ1K0JHam41ZUZwOUNNd09UY0FBQkJJQUFCQUlBRUFBSUVFQUFBRUVnQUFFRWdBQUVBZ0FRQUFnUVFBQUFRU0FBQVFTQUFBUUNBQkFBQ0JCQUFBQkJJQUFCQklBQUJBSUFFQUFJRUVBQUFFRWdBQUVFZ0FBRUFnQVFBQWdRUUFBQVFTQUFBUVNBQUFRQ0FCQUFDQkJBQUFCQklBQUJCSUFBQkFJQUVBQUlFRUFBQUVFZ0FBRU9odTlBUEFWbDRlbmtZL0FoTzRmMzRjL1Fpd0NUY0FBQkJJQUFCQUlBRUFBSUVFQUFBRUVnQUFFRWdBQUVBZ0FRQUFnUVFBQUFRU0FBQVFTQUFBUUNBQkFBQ0JCQUFBQkJJQUFCQklBQUJBSUFFQUFJRUVBQUFFRWdBQUVFZ0FBRUFnQVFBQWdlNUdQd0JzNWY3NWNmUWpBSlRsQmdBQUFna0FBQWdrQUFBZ2tBQUFnRUFDQUFBQ0NRQUFDQ1FBQUNDUUFBQ0FRQUlBQUFJSkFBQUlKQUFBSUpBQUFJQkFBZ0FBQWdrQUFBZ2tBQUFna0FBQWdFQUNBQUFDQ1FBQUNDUUFBQ0NRQUFDQVFBSUFBQUlKQUFBSUpBQUFJSkFBQUlCQUFnQUFBZ2tBQUFna0FBQWdrQUFBZ0VBQ0FBQUMzWTErQU5qS3k4UFQ2RWRnQXZmUGo2TWZBVGJoQmdBQUFna0FBQWdrQUFBZ2tBQUFnRUFDQUFBQ0NRQUFDQ1FBQUNDUUFBQ0FRQUlBQUFJSkFBQUlKQUFBSUpBQUFJQkFBZ0FBQWdrQUFBZ2tBQUFna0FBQWdFQUNBQUFDQ1FBQUNDUUFBQ0NRQUFDQVFBSUFBQUlKQUFBSUpBQUFJSkFBQUlCQUFnQUFBZ2tBQUFna0FBQWdrQUFBZ0VBQ0FBQUNDUUFBQ0NRQUFDQ1FBQUNBUUFJQUFBSUpBQUFJSkFBQUlKQUFBSUJBQWdBQUFna0FBQWdrQUFBZ2tBQUFnRUFDQUFBQ0NRQUFDQ1FBQUNDUUFBQ0FRQUlBQUFJSkFBQUlKQUFBSUpBQUFJQkFBZ0FBQWdrQUFBZ2tBQUFna0FBQWdFQUNBQUFDQ1FBQUNDUUFBQ0NRQUFDQVFBSUFBQUlKQUFBSUpBQUFJSkFBQUlCQUFnQUFBZ2tBQUFna0FBQWdrQUFBZ0VBQ0FBQUNDUUFBQ0NRQUFDRFEzZWdIQVBaeC8veDQxdi91NWVGcDR5Y0JLaEFBTUtsekIvK2ovNThnZ0RrSkFKakl0YU4vN245VERNQThCQUJNWUl2aFAvWG5DQUhvVHdCQVkzc04vM3QvcmhDQXZ2d3RBR2hxMVBoWGV3YmdPbTRBb0pscW8rczJBSHB5QXdDTlZCdi9ZNVdmRGZpWEFJQW1PZ3hzaDJjRVhna0FhS0RUc0haNlZrZ21BS0M0am9QYThaa2hqUUNBd2pvUGFlZG5od1FDQUlxYVlVQm5lQWVZbFFBQWdFQUNBQXFhNlpQelRPOENNeEVBVU15TWd6bmpPMEYzQWdBQUFna0FLR1RtVDhvenZ4dDBKQUFBSUpBQWdDSVNQaUVudkNOMElRQUFJSkFBQUlCQUFnQUtTTG9hVDNwWHFFd0FBRUFnQVFBQWdRUUFBQVFTQURCWTRuZmlpZThNMVFnQUFBZ2tBQUFna0FBQWdFQUNBQUFDQ1FBQUNDUUFBQ0NRQUFDQVFBSUFBQUlKQUFBSUpBQmdzSmVIcDlHUHNMdkVkNFpxQkFBQUJCSUFBQkJJQUFCQUlBRUFCU1I5SjU3MHJsQ1pBQUNBUUFJQUFBSUpBQ2dpNFdvODRSMmhDd0VBQUlFRUFCUXk4eWZrbWQ4Tk9oSUFBQkJJQUVBeE0zNVNudkdkb0RzQkFBWE5OSmd6dlF2TVJBQUFRQ0FCQUVYTjhNbDVobmVBV1FrQUtLenpnSForZGtnZ0FLQzRqa1BhOFpraGpRQ0FCam9OYXFkbmhXUUNBSnJvTUt3ZG5oRjRKUUNna2NvRFcvblpnSC9kalg0QTRES0hvYjEvZmh6OEpLOE1QL1RrQmdDYXFqQzhGWjRCdUk0YkFHaHMxRzJBNFlmK0JBQk1ZSzhRTVB3d0R3RUFFemtlNkxWaXdPakRuQVFBVE9ydjRUNDNDQXcrWkJBQUVNS3dBOGY4TFFBQUNDUUFBQ0NRQUFDQVFBSUFBQUlKQUFBSUpBQUFJSkFBQUlCQUFnQUFBZ2tBQUFna0FBQWdrQUFBZ0VBQ0FBQUNDUUFBQ0NRQUFDQ1FBQUNBUUFJQUFBTGRqWDRBMk1yOTgrUG9Sd0FveXcwQUFBUVNBQUFRU0FBQVFDQUJBQUNCQkFBQUJCSUFBQkJJQUFCQUlBRUFBSUVFQUFBRUVnQUFFRWdBQUVBZ0FRQUFnUVFBQUFRU0FBQVFTQUFBUUNBQkFBQ0JCQUFBQkJJQUFCQklBQUJBSUFFQUFJRUVBQUFFRWdBQUVFZ0FBRUFnQVFBQWdRUUFBQVFTQUFBUVNBQUFRQ0FCQUFDQkJBQUFCTG9iL1FETTcrWGhhZlFqQVBBWE53QUFFRWdBQUVBZ0FRQUFnUVFBQUFRU0FBQVFTQUFBUUNBQkFBQ0JCQUFBQkJJQUFCQklBQUJBSUFFQUFJRUVBQUFFRWdBQUVFZ0FBRUFnQVFBQWdRUUFBQVFTQUFBUVNBQUFRQ0FCQUFDQkJBQUFCQklBQUJCSUFBQkFJQUVBQUlFRUFBQUUrdnpseDdkUG94OENBTmpQbHgvZlBya0JBSUJBQWdBQUFna0FBQWdrQUFBZ2tBQUFnRUFDQUFBQ0NRQUFDUFI1V1Y3L1B1RG9Cd0VBdG5mWWZEY0FBQkJJQUFCQUlBRUFBSUVFQUFBRStoMEFmaEVRQU9aMnZQVnVBQUFna0FBQWdFQUNBQUFDL1JFQWZnOEFBT2IwOThhN0FRQ0FRQUlBQUFJSkFBQUk5RThBK0QwQUFKakxXOXZ1QmdBQUFna0FBQWowWmdENEdnQUE1dkRlcHJzQkFJQkFBZ0FBQXIwYkFMNEdBSURlVG0yNUd3QUFDQ1FBQUNEUXlRRHdOUUFBOVBUUmhyc0JBSUJBSHdhQVd3QUE2T1djN1hZREFBQ0JCQUFBQkRvckFId05BQUE5bkx2WmJnQUFJTkRaQWVBV0FBQnF1MlNyM1FBQVFLQ0xBc0F0QUFEVWRPbEd1d0VBZ0VBWEI0QmJBQUNvNVpwdGRnTUFBSUd1Q2dDM0FBQlF3N1diN0FZQUFBSmRIUUJ1QVFCZ3JGdTIrS1liQUJFQUFHUGN1c0crQWdDQVFEY0hnRnNBQU5qWEd0dnJCZ0FBQXEwU0FHNEJBR0FmYTIzdWFqY0FJZ0FBdHJYbTF2b0tBQUFDclJvQWJnRUFZQnRyYit6cU53QWlBQURXdGNXMmJ2SVZnQWdBZ0hWc3RhbCtCd0FBQW0wV0FHNEJBT0EyVzI3cHBqY0FJZ0FBcnJQMWhtNytGWUFJQUlETDdMR2RmZ2NBQUFMdEVnQnVBUURnUEh0dDVtNDNBQ0lBQUU3YmN5dDMvUXBBQkFEQTIvYmV5TjEvQjBBRUFNQ2ZSbXpqa0Y4Q0ZBRUE4R3JVSmc3N1d3QWlBSUIwSTdkdzZGOERGQUVBcEJxOWdjUC9IWURSQndBQWU2dXdmY01EWUZscUhBUUE3S0hLNXBVSWdHV3BjeUFBc0pWS1cxY21BSmFsMXNFQXdKcXFiVnlwQUZpV2VnY0VBTGVxdUczbEFtQlphaDRVQUZ5ajZxYVZESUJscVh0Z0FIQ3V5bHRXTmdDV3BmYkJBY0FwMVRlc2RBQXNTLzBEQklDL2RkaXU4Zzk0N09mWDc3OUdQd01BdktmRDhCK1V2d0U0MXVsZ0FjalNiYU5hQmNDeTlEdGdBT2JYY1p2YVBmQXhYd2tBTUZMSDRUOW9kd053clBQQkE5QmI5dzFxSFFETDB2OEhBRUEvTTJ4UCt4YzQ1aXNCQUxZMHcvQWZ0TDhCT0RiVER3YUFXbWJibUtsZTVwamJBQURXTU52d0gwejVVc2VFQUFEWG1IWDRENmI2Q3VBdHMvOEFBVmhmd25aTS80TEgzQVlBY0VyQzhCL0V2T2d4SVFEQXNhVGhQNGg3NFdOQ0FDQmI0dkFmeEw3NE1TRUFrQ1Y1K0EvaUQrQ1lFQUNZbStIL240TjRoeGdBbUlQUmY1dEQrWUFRQU9qSjhKL21jQzRnQmdCcU0vcm5jMUJYRWdNQU5Sajk2emkwRllnQmdIMFovZHM1d0EwSUFvQjFHZnoxT2RBZENBS0F5eGo4N1RuZ1FVUUJ3Q3RqUDRaREwwb2dBTE13OERYOUI0OXNyZWY0OFdGQUFBQUFBRWxGVGtTdVFtQ0MiLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2UvcG5nIiwicHVycG9zZSI6ImFueSJ9LHsic3JjIjoiZGF0YTppbWFnZS9wbmc7YmFzZTY0LGlWQk9SdzBLR2dvQUFBQU5TVWhFVWdBQUFnQUFBQUlBQ0FZQUFBRDBlTlQ2QUFBTnMwbEVRVlI0bk8zY3pYVVV5UmFGMFlRbEQ0UlJ5QkZoRTNKRUdJVnNvQWRhUlJjZ2xlb25NK1BlT0h1UDMyc3lRNFB6VlpUZzAwSkpQNzkrL3pYNkdRRFc4T1hIdDAram40Ri8rYUVNWXVBQlhnbUVNUno2RG93OXdHVkV3ZlljOEFZTVBzQzZCTUg2SE9nS0REN0F2Z1RCN1J6Z2xZdytRQTFpNERvTzdRSkdINkEyTVhBK0IvVUJvdy9Ra3hnNHplRzh3L0FEekVFSXZNMmhIREg2QUhNVEEvOXpFSXZoQjBnakJNSUR3UEFEWkVzT2djZ1hOL3dBSEVzTWdhZ1hOdndBbkpJVUFoRXZhdmdCdUVSQ0NId2UvUUJiTS80QVhDcGhPNll0bklRZkhnRGJtL1UyWUxxWE12d0FiR0cyRUpqcUt3RGpEOEJXWnR1WUtXcG10aDhLQUxYTmNCdlEvZ2JBK0FPd3R4bTJwM1VBelBBREFLQ243aHZVOGdxais2RURNSmVPWHdtMHV3RXcvZ0JVMDNHYldnVkF4d01HSUVPM2pXcHhaZEh0VUFISTF1RXJnZkkzQU1ZZmdHNDZiRmZwQU9od2dBRHdsdW9iVmpZQXFoOGNBSHlrOHBhVkRJREtCd1lBbDZpNmFlVUNvT3BCQWNDMUttNWJxUUNvZUVBQXNJWnFHMWNtQUtvZERBQ3NyZExXbFFpQVNnY0NBRnVxc25uREE2REtRUURBWGlwczM5QUFxSEFBQUREQzZBMGNGZ0NqWHh3QVJodTVoVU1Dd1BnRHdLdFJtN2g3QUJoL0FQalRpRzNjTlFDTVB3QzhiZStOM0MwQWpEOEFuTGJuVnU0U0FNWWZBTTZ6MTJZTy8zY0FBSUQ5YlI0QVB2MER3R1gyMk01TkE4RDRBOEIxdHQ3UXpRTEErQVBBYmJiY1VyOERBQUNCTmdrQW4vNEJZQjFiYmVycUFXRDhBV0JkVzJ6cnFnRmcvQUZnRzJ0dnJOOEJBSUJBcXdXQVQvOEFzSzAxdDNhVkFERCtBTENQdFRiWFZ3QUFFT2ptQVBEcEh3RDJ0Y2IydWdFQWdFQTNCWUJQL3dBd3hxMGJmSFVBR0g4QUdPdVdMZllWQUFBRXVpb0FmUG9IZ0JxdTNXUTNBQUFRNk9JQThPa2ZBR3E1WnB2ZEFBQkFvSXNDd0tkL0FLanAwbzEyQXdBQWdjNE9BSi8rQWFDMlM3YmFEUUFBQkRvckFIejZCNEFlenQxc053QUFFRWdBQUVDZ0R3UEE5VDhBOUhMT2Ryc0JBSUJBSndQQXAzOEE2T21qRFhjREFBQ0JCQUFBQkhvM0FGei9BMEJ2cDdiY0RRQUFCQklBQUJEb3pRQncvUThBYzNodjA5MEFBRUFnQVFBQWdmNEpBTmYvQURDWHQ3YmREUUFBQkJJQUFCQklBQUJBb0Q4Q3dQZi9BRENudnpmZURRQUFCQklBQUJCSUFBQkFvTjhCNFB0L0FKamI4ZGE3QVFDQVFBSUFBQUxkalg0QW1Objk4K09RUC9mbDRXbjEvK1pNN3dLNEFRQ0FTSitYeFM4QUFrQ0t3K2E3QVFDQVFBSUFBQUlKQUFBSUpBQUFJSkFBQUlCQUFnQUFBZ2tBQUFqMDJiOEJBQUJaZm43OS9zc05BQUFFRWdBQUVFZ0FBRUFnQVFBQWdRUUFBQVFTQUFBUVNBQUFRQ0FCQUFDQkJBQUFCQklBQUJCSUFBQkFJQUVBQUlFRUFBQUVFZ0FBRUVnQUFFQWdBUUFBZ1FRQUFBUVNBQUFRU0FBQVFDQUJBQUNCQkFBQUJCSUFBQkJJQUFCQUlBRUFBSUVFQUFBRSt2VHo2L2Rmb3grQ3VkMC9QNDUrQkdqbjVlRnA5Q013T1RjQUFCQklBQUJBSUFFQUFJRUVBQUFFRWdBQUVFZ0FBRUFnQVFBQWdRUUFBQVFTQUFBUVNBQUFRQ0FCQUFDQkJBQUFCQklBQUJCSUFBQkFJQUVBQUlFRUFBQUVFZ0FBRUVnQUFFQWdBUUFBZ1FRQUFBUVNBQUFRU0FBQVFDQUJBQUNCQkFBQUJCSUFBQkJJQUFCQUlBRUFBSUVFQUFBRUVnQUFFT2h1OUFQQVZsNGVua1kvQWhPNGYzNGMvUWl3Q1RjQUFCQklBQUJBSUFFQUFJRUVBQUFFRWdBQUVFZ0FBRUFnQVFBQWdRUUFBQVFTQUFBUVNBQUFRQ0FCQUFDQkJBQUFCQklBQUJCSUFBQkFJQUVBQUlFRUFBQUVFZ0FBRUVnQUFFQWdBUUFBZ2U1R1B3QnM1Zjc1Y2ZRakFKVGxCZ0FBQWdrQUFBZ2tBQUFna0FBQWdFQUNBQUFDQ1FBQUNDUUFBQ0NRQUFDQVFBSUFBQUlKQUFBSUpBQUFJSkFBQUlCQUFnQUFBZ2tBQUFna0FBQWdrQUFBZ0VBQ0FBQUNDUUFBQ0NRQUFDQ1FBQUNBUUFJQUFBSUpBQUFJSkFBQUlKQUFBSUJBQWdBQUFna0FBQWdrQUFBZ2tBQUFnRUFDQUFBQzNZMStBTmpLeThQVDZFZGdBdmZQajZNZkFUYmhCZ0FBQWdrQUFBZ2tBQUFna0FBQWdFQUNBQUFDQ1FBQUNDUUFBQ0NRQUFDQVFBSUFBQUlKQUFBSUpBQUFJSkFBQUlCQUFnQUFBZ2tBQUFna0FBQWdrQUFBZ0VBQ0FBQUNDUUFBQ0NRQUFDQ1FBQUNBUUFJQUFBSUpBQUFJSkFBQUlKQUFBSUJBQWdBQUFna0FBQWdrQUFBZ2tBQUFnRUFDQUFBQ0NRQUFDQ1FBQUNDUUFBQ0FRQUlBQUFJSkFBQUlKQUFBSUpBQUFJQkFBZ0FBQWdrQUFBZ2tBQUFna0FBQWdFQUNBQUFDQ1FBQUNDUUFBQ0NRQUFDQVFBSUFBQUlKQUFBSUpBQUFJSkFBQUlCQUFnQUFBZ2tBQUFna0FBQWdrQUFBZ0VBQ0FBQUNDUUFBQ0NRQUFDQ1FBQUNBUUFJQUFBSUpBQUFJSkFBQUlKQUFBSUJBQWdBQUFna0FBQWdrQUFBZ2tBQUFnRUFDQUFBQ0NRQUFDQ1FBQUNEUTNlZ0hBUFp4Ly94NDF2L3U1ZUZwNHljQktoQUFNS2x6Qi8rai81OGdnRGtKQUpqSXRhTi83bjlURE1BOEJBQk1ZSXZoUC9YbkNBSG9Ud0JBWTNzTi8zdC9yaENBdnZ3dEFHaHExUGhYZXdiZ09tNEFvSmxxbytzMkFIcHlBd0NOVkJ2L1k1V2ZEZmlYQUlBbU9neHNoMmNFWGdrQWFLRFRzSFo2VmtnbUFLQzRqb1BhOFpraGpRQ0F3am9QYWVkbmh3UUNBSXFhWVVCbmVBZVlsUUFBZ0VBQ0FBcWE2WlB6VE84Q014RUFVTXlNZ3puak8wRjNBZ0FBQWdrQUtHVG1UOG96dnh0MEpBQUFJSkFBZ0NJU1BpRW52Q04wSVFBQUlKQUFBSUJBQWdBS1NMb2FUM3BYcUV3QUFFQWdBUUFBZ1FRQUFBUVNBREJZNG5maWllOE0xUWdBQUFna0FBQWdrQUFBZ0VBQ0FBQUNDUUFBQ0NRQUFDQ1FBQUNBUUFJQUFBSUpBQUFJSkFCZ3NKZUhwOUdQc0x2RWQ0WnFCQUFBQkJJQUFCQklBQUJBSUFFQUJTUjlKNTcwcmxDWkFBQ0FRQUlBQUFJSkFDZ2k0V284NFIyaEN3RUFBSUVFQUJReTh5ZmttZDhOT2hJQUFCQklBRUF4TTM1U252R2RvRHNCQUFYTk5KZ3p2UXZNUkFBQVFDQUJBRVhOOE1sNWhuZUFXUWtBS0t6emdIWitka2dnQUtDNGprUGE4WmtoalFDQUJqb05hcWRuaFdRQ0FKcm9NS3dkbmhGNEpRQ2drY29EVy9uWmdIL2RqWDRBNERLSG9iMS9maHo4Sks4TVAvVGtCZ0NhcWpDOEZaNEJ1STRiQUdoczFHMkE0WWYrQkFCTVlLOFFNUHd3RHdFQUV6a2U2TFZpd09qRG5BUUFUT3J2NFQ0M0NBdytaQkFBRU1Ld0E4ZjhMUUFBQ0NRQUFDQ1FBQUNBUUFJQUFBSUpBQUFJSkFBQUlKQUFBSUJBQWdBQUFna0FBQWdrQUFBZ2tBQUFnRUFDQUFBQ0NRQUFDQ1FBQUNDUUFBQ0FRQUlBQUFMZGpYNEEyTXI5OCtQb1J3QW95dzBBQUFRU0FBQVFTQUFBUUNBQkFBQ0JCQUFBQkJJQUFCQklBQUJBSUFFQUFJRUVBQUFFRWdBQUVFZ0FBRUFnQVFBQWdRUUFBQVFTQUFBUVNBQUFRQ0FCQUFDQkJBQUFCQklBQUJCSUFBQkFJQUVBQUlFRUFBQUVFZ0FBRUVnQUFFQWdBUUFBZ1FRQUFBUVNBQUFRU0FBQVFDQUJBQUNCQkFBQUJMb2IvUURNNytYaGFmUWpBUEFYTndBQUVFZ0FBRUFnQVFBQWdRUUFBQVFTQUFBUVNBQUFRQ0FCQUFDQkJBQUFCQklBQUJCSUFBQkFJQUVBQUlFRUFBQUVFZ0FBRUVnQUFFQWdBUUFBZ1FRQUFBUVNBQUFRU0FBQVFDQUJBQUNCQkFBQUJCSUFBQkJJQUFCQUlBRUFBSUVFQUFBRSt2emx4N2RQb3g4Q0FOalBseC9mUHJrQkFJQkFBZ0FBQWdrQUFBZ2tBQUFna0FBQWdFQUNBQUFDQ1FBQUNQUjVXVjcvUHVEb0J3RUF0bmZZZkRjQUFCQklBQUJBSUFFQUFJRUVBQUFFK2gwQWZoRVFBT1oydlBWdUFBQWdrQUFBZ0VBQ0FBQUMvUkVBZmc4QUFPYjA5OGE3QVFDQVFBSUFBQUlKQUFBSTlFOEErRDBBQUpqTFc5dnVCZ0FBQWdrQUFBajBaZ0Q0R2dBQTV2RGVwcnNCQUlCQUFnQUFBcjBiQUw0R0FJRGVUbTI1R3dBQUNDUUFBQ0RReVFEd05RQUE5UFRSaHJzQkFJQkFId2FBV3dBQTZPV2M3WFlEQUFDQkJBQUFCRG9yQUh3TkFBQTluTHZaYmdBQUlORFpBZUFXQUFCcXUyU3IzUUFBUUtDTEFzQXRBQURVZE9sR3V3RUFnRUFYQjRCYkFBQ281WnB0ZGdNQUFJR3VDZ0MzQUFCUXc3V2I3QVlBQUFKZEhRQnVBUUJnckZ1MitLWWJBQkVBQUdQY3VzRytBZ0NBUURjSGdGc0FBTmpYR3R2ckJnQUFBcTBTQUc0QkFHQWZhMjN1YWpjQUlnQUF0clhtMXZvS0FBQUNyUm9BYmdFQVlCdHJiK3pxTndBaUFBRFd0Y1cyYnZJVmdBZ0FnSFZzdGFsK0J3QUFBbTBXQUc0QkFPQTJXMjdwcGpjQUlnQUFyclAxaG03K0ZZQUlBSURMN0xHZGZnY0FBQUx0RWdCdUFRRGdQSHR0NW00M0FDSUFBRTdiY3l0My9RcEFCQURBMi9iZXlOMS9CMEFFQU1DZlJtemprRjhDRkFFQThHclVKZzc3V3dBaUFJQjBJN2R3NkY4REZBRUFwQnE5Z2NQL0hZRFJCd0FBZTZ1d2ZjTURZRmxxSEFRQTdLSEs1cFVJZ0dXcGN5QUFzSlZLVzFjbUFKYWwxc0VBd0pxcWJWeXBBRmlXZWdjRUFMZXF1RzNsQW1CWmFoNFVBRnlqNnFhVkRJQmxxWHRnQUhDdXlsdFdOZ0NXcGZiQkFjQXAxVGVzZEFBc1MvMERCSUMvZGRpdThnOTQ3T2ZYNzc5R1B3TUF2S2ZEOEIrVXZ3RTQxdWxnQWNqU2JhTmFCY0N5OUR0Z0FPYlhjWnZhUGZBeFh3a0FNRkxINFQ5b2R3TndyUFBCQTlCYjl3MXFIUURMMHY4SEFFQS9NMnhQK3hjNDVpc0JBTFkwdy9BZnRMOEJPRGJURHdhQVdtYmJtS2xlNXBqYkFBRFdNTnZ3SDB6NVVzZUVBQURYbUhYNEQ2YjZDdUF0cy84QUFWaGZ3blpNLzRMSDNBWUFjRXJDOEIvRXZPZ3hJUURBc2FUaFA0aDc0V05DQUNCYjR2QWZ4TDc0TVNFQWtDVjUrQS9pRCtDWUVBQ1ltK0gvbjRONGh4Z0FtSVBSZjV0RCtZQVFBT2pKOEovbWNDNGdCZ0JxTS9ybmMxQlhFZ01BTlJqOTZ6aTBGWWdCZ0gwWi9kczV3QTBJQW9CMUdmejFPZEFkQ0FLQXl4ajg3VG5nUVVRQndDdGpQNFpETDBvZ0FMTXc4RFg5QjQ5c3JlZjQ4V0ZBQUFBQUFFbEZUa1N1UW1DQyIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9wbmciLCJwdXJwb3NlIjoibWFza2FibGUifV19" />
+
+  <!-- Tailwind CSS & React / Babel -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    html, body, #root {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #f8fafc;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .top-safe-area {
+      padding-top: max(12px, env(safe-area-inset-top));
+    }
+    .bottom-safe-area {
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    @keyframes stampBounce {
+      0% { transform: scale(1); }
+      50% { transform: scale(0.9); }
+      100% { transform: scale(1); }
+    }
+    .stamp-click {
+      animation: stampBounce 0.2s ease-in-out;
+    }
+  </style>
+</head>
+<body class="h-full w-full font-sans antialiased text-slate-800 bg-slate-100">
+  <div id="root" class="h-full w-full"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const defaultApiKey = "";
+
+    // --- Fix #1: ローカル日付基準のヘルパー関数 ---
+    // toISOString() はUTC基準になるため、JSTの深夜0時〜9時台に「今日」の判定がズレる。
+    // カレンダー本体のdateStr組み立てと同じロジック(ローカル年月日)で統一する。
+    function toLocalDateStr(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    const Icons = {
+      Calendar: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>,
+      Camera: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>,
+      Settings: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>,
+      Palmtree: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,
+      Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"/></svg>,
+      Close: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>,
+      Sparkles: () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clipRule="evenodd"/></svg>,
+      Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
+      ExternalLink: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>,
+      CursorClick: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>,
+      Pencil: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>,
+      Key: () => <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+    };
+
+    const DEFAULT_SHIFT_PATTERNS = [
+      { id: 'dayB', name: '日B', symbol: '日B', startTime: '09:00', endTime: '18:00', breakTime: 60, color: '#2563EB', bgColor: '#DBEAFE', paidLeaveHours: 0 },
+      { id: 'junta', name: '準A', symbol: '準A', startTime: '13:00', endTime: '22:00', breakTime: 60, color: '#7C3AED', bgColor: '#EDE9FE', paidLeaveHours: 0 },
+      { id: 'day', name: '日勤', symbol: '日', startTime: '09:00', endTime: '18:00', breakTime: 60, color: '#059669', bgColor: '#D1FAE5', paidLeaveHours: 0 },
+      { id: 'off', name: '公休', symbol: '公', startTime: '', endTime: '', breakTime: 0, color: '#64748B', bgColor: '#F1F5F9', paidLeaveHours: 0 },
+      { id: 'paid_full', name: '有給', symbol: '有', startTime: '', endTime: '', breakTime: 0, color: '#DB2777', bgColor: '#FCE7F3', paidLeaveHours: 8 },
+      { id: 'paid_half', name: '半休', symbol: '半', startTime: '09:00', endTime: '13:30', breakTime: 0, color: '#E11D48', bgColor: '#FFE4E6', paidLeaveHours: 4 },
+    ];
+
+    function App() {
+      const [activeTab, setActiveTab] = useState('calendar');
+      const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('shift_snap_api_key') || '');
+
+      const [workHoursPerDay, setWorkHoursPerDay] = useState(8);
+      const [shiftPatterns, setShiftPatterns] = useState(DEFAULT_SHIFT_PATTERNS);
+
+      const [basePaidLeaveDays, setBasePaidLeaveDays] = useState(15);
+      const [grantMonth, setGrantMonth] = useState(4);
+      const [grantDay, setGrantDay] = useState(1);
+      const [grantAmountDays, setGrantAmountDays] = useState(12);
+      const [baseYear, setBaseYear] = useState(2026);
+
+      const [currentDate, setCurrentDate] = useState(new Date());
+      const [shifts, setShifts] = useState([]);
+
+      const [stampModeActive, setStampModeActive] = useState(false);
+      const [selectedStampPattern, setSelectedStampPattern] = useState(null);
+
+      // 安全な画像データ保持ステート
+      const [compressedImageData, setCompressedImageData] = useState(null);
+      const [isScanning, setIsScanning] = useState(false);
+      const [scanResults, setScanResults] = useState([]);
+      const [scanMessage, setScanMessage] = useState('');
+      const [toastMessage, setToastMessage] = useState(null);
+      const fileInputRef = useRef(null);
+
+      const [editingShift, setEditingShift] = useState(null);
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
+      const [editingPattern, setEditingPattern] = useState(null);
+      const [newPatternName, setNewPatternName] = useState('');
+
+      const showToast = (msg, type = 'info') => {
+        setToastMessage({ msg, type });
+        setTimeout(() => setToastMessage(null), 3000);
+      };
+
+      const handleApiKeyChange = (e) => {
+        const val = e.target.value;
+        setUserApiKey(val);
+        localStorage.setItem('shift_snap_api_key', val);
+      };
+
+      // --- Fix #2: 有給残数の計算は「実際の今日」を基準に付与判定を行う ---
+      // これまでは currentDate(カレンダーの表示中の年月)を基準にしていたため、
+      // カレンダーを未来の月に送るとまだ来ていない年次付与分まで加算されてしまっていた。
+      // 付与判定には「実日付」を使い、「今月消費した時間」の集計にだけ currentDate を使う。
+      const calculatePaidLeave = () => {
+        const today = new Date();
+        const rYear = today.getFullYear();
+        const rMonth = today.getMonth() + 1;
+        const rDay = today.getDate();
+
+        let addedGrants = 0;
+        if (rYear > baseYear) {
+          for (let y = baseYear + 1; y <= rYear; y++) {
+            if (y < rYear) {
+              addedGrants += grantAmountDays;
+            } else {
+              if (rMonth > grantMonth || (rMonth === grantMonth && rDay >= grantDay)) {
+                addedGrants += grantAmountDays;
+              }
+            }
+          }
+        }
+
+        const totalHoursAvailable = (basePaidLeaveDays + addedGrants) * workHoursPerDay;
+        const totalHoursConsumed = shifts.reduce((sum, s) => sum + (Number(s.paidLeaveHours) || 0), 0);
+
+        // 「今月の消費時間」は、カレンダーで表示している月を対象にする(こちらは currentDate のままでOK)
+        const cYear = currentDate.getFullYear();
+        const cMonth = currentDate.getMonth() + 1;
+        const curMonthPrefix = `${cYear}-${String(cMonth).padStart(2, '0')}`;
+        const monthlyHoursConsumed = shifts
+          .filter(s => s.date.startsWith(curMonthPrefix))
+          .reduce((sum, s) => sum + (Number(s.paidLeaveHours) || 0), 0);
+
+        const remainingHours = Math.max(0, totalHoursAvailable - totalHoursConsumed);
+        const remainingDays = Math.floor(remainingHours / workHoursPerDay);
+        const remainingExtraHours = Math.round((remainingHours % workHoursPerDay) * 10) / 10;
+
+        return {
+          totalHoursAvailable, totalHoursConsumed, monthlyHoursConsumed, remainingHours, remainingDays, remainingExtraHours
+        };
+      };
+      const paidLeaveStats = calculatePaidLeave();
+
+      // --- Fix #3: 縦長写真も正しく縮小されるよう、幅と高さの大きい方を基準にする ---
+      const handleImageChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            const MAX_DIM = 1000;
+            let width = img.width;
+            let height = img.height;
+
+            const longestSide = Math.max(width, height);
+            if (longestSide > MAX_DIM) {
+              const scale = MAX_DIM / longestSide;
+              width = Math.round(width * scale);
+              height = Math.round(height * scale);
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            setCompressedImageData({
+              preview: compressedBase64,
+              base64: compressedBase64.split(',')[1],
+              mimeType: 'image/jpeg'
+            });
+            setScanResults([]);
+            setScanMessage('');
+            showToast('画像を正常に読み込みました', 'success');
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+        e.target.value = null;
+      };
+
+      const handleScanShiftTable = async () => {
+        if (!compressedImageData) {
+          showToast('画像が選択されていません', 'error');
+          return;
+        }
+        
+        const activeApiKey = userApiKey || defaultApiKey;
+        if (!activeApiKey) {
+          showToast('APIキーが設定されていません。設定タブから入力してください。', 'error');
+          return;
+        }
+
+        setIsScanning(true);
+        setScanMessage('AIがシフト表を解析中...');
+        setScanResults([]);
+
+        try {
+          const year = currentDate.getFullYear();
+          const month = currentDate.getMonth() + 1;
+
+          const systemPrompt = `あなたはOCRスペシャリストです。提供された画像は、勤務シフト表の「1ヶ月分（1日〜末日）のシフト」が横一列またはカレンダー状に並んだ画像です。
+左から順に1日、2日...と数えて読み取ってください。
+空白や斜線は「公休」として扱ってください。
+登録されているシフトパターン: ${JSON.stringify(shiftPatterns.map(p => ({ name: p.name, symbol: p.symbol, hours: p.paidLeaveHours })))}
+対象年月: ${year}年${month}月
+
+必ず以下のJSON形式のみで出力してください。Markdownの装飾(\`\`\`jsonなど)は絶対に含めないでください:
+{
+  "shifts": [
+    { "date": "YYYY-MM-DD", "shiftName": "読み取った記号", "startTime": "HH:MM", "endTime": "HH:MM", "paidLeaveHours": 数値, "note": "" }
+  ]
+}`;
+
+          const payload = {
+            contents: [{
+              role: "user",
+              parts: [
+                { text: `${year}年${month}月のシフトを1日から末日まで抽出してください。` },
+                { inlineData: { mimeType: compressedImageData.mimeType, data: compressedImageData.base64 } }
+              ]
+            }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: {
+              responseMimeType: "application/json",
+            }
+          };
+
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${activeApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+          
+          let parsedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!parsedText) throw new Error('解析結果が空でした');
+          
+          parsedText = parsedText.replace(/```json/g, '').replace(/```/g, '').trim();
+          const parsed = JSON.parse(parsedText);
+
+          const list = (parsed.shifts || []).map((s, idx) => {
+            const p = shiftPatterns.find(pat => pat.name === s.shiftName || pat.symbol === s.shiftName);
+            const hours = Number(s.paidLeaveHours) || p?.paidLeaveHours || 0;
+            return {
+              id: `scan-${Date.now()}-${idx}`,
+              date: s.date,
+              shiftName: p ? p.name : (s.shiftName || '日B'),
+              startTime: s.startTime || p?.startTime || (hours >= workHoursPerDay ? '' : '09:00'),
+              endTime: s.endTime || p?.endTime || (hours >= workHoursPerDay ? '' : '18:00'),
+              breakTime: p?.breakTime ?? (hours >= workHoursPerDay ? 0 : 60),
+              paidLeaveHours: hours,
+              color: p?.color || (hours > 0 ? '#DB2777' : '#2563EB'),
+              bgColor: p?.bgColor || (hours > 0 ? '#FCE7F3' : '#DBEAFE'),
+              note: s.note || ''
+            };
+          });
+
+          if (list.length === 0) {
+            setScanMessage('シフトが読み取れませんでした。');
+            showToast('見つかりませんでした', 'error');
+          } else {
+            setScanResults(list);
+            setScanMessage(`${list.length}件のシフトを抽出しました！`);
+            showToast(`${list.length}件抽出成功！`, 'success');
+          }
+        } catch (e) {
+          console.error("Scan Error:", e);
+          setScanMessage(`スキャンに失敗しました: ${e.message}`);
+          showToast('スキャンエラー', 'error');
+        } finally {
+          setIsScanning(false);
+        }
+      };
+
+      const handleApplyScan = () => {
+        const dates = new Set(scanResults.map(s => s.date));
+        setShifts(prev => [...prev.filter(s => !dates.has(s.date)), ...scanResults].sort((a,b) => a.date.localeCompare(b.date)));
+        setScanResults([]);
+        setCompressedImageData(null);
+        setActiveTab('calendar');
+        showToast('カレンダーに登録しました！', 'success');
+      };
+
+      // --- Fix #4: "\\n" (バックスラッシュ+n という文字列) ではなく実際の改行 "\n" を使う ---
+      const handleSyncCalendar = (shift, type) => {
+        const title = encodeURIComponent(`[シフト] ${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有休${shift.paidLeaveHours}h)` : ''}`);
+        const details = encodeURIComponent(`労働時間: ${shift.startTime} - ${shift.endTime}\n備考: ${shift.note || 'なし'}`);
+        const dateClean = shift.date.replace(/-/g, '');
+        
+        let url = '';
+        if (type === 'google') {
+          url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateClean}/${dateClean}&details=${details}`;
+        } else if (type === 'apple') {
+          const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${shift.shiftName}\nDTSTART;VALUE=DATE:${dateClean}\nDTEND;VALUE=DATE:${dateClean}\nEND:VEVENT\nEND:VCALENDAR`;
+          url = `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`;
+        }
+        window.open(url, '_blank');
+      };
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const totalDays = new Date(year, month + 1, 0).getDate();
+      const calendarDays = [];
+      for (let i = 0; i < firstDay; i++) calendarDays.push(null);
+      for (let d = 1; d <= totalDays; d++) {
+        const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        calendarDays.push({ day: d, dateStr: dStr, shift: shifts.find(s => s.date === dStr) });
+      }
+      while (calendarDays.length % 7 !== 0) calendarDays.push(null);
+      const totalWeeks = calendarDays.length / 7;
+
+      const handleDateClick = (dateStr, currentShift, e) => {
+        if (stampModeActive && selectedStampPattern) {
+          const el = e.currentTarget;
+          el.classList.add('stamp-click');
+          setTimeout(() => el.classList.remove('stamp-click'), 200);
+
+          const newShift = {
+            id: currentShift ? currentShift.id : `s-${Date.now()}`,
+            date: dateStr,
+            shiftName: selectedStampPattern.name,
+            startTime: selectedStampPattern.startTime,
+            endTime: selectedStampPattern.endTime,
+            breakTime: selectedStampPattern.breakTime,
+            paidLeaveHours: selectedStampPattern.paidLeaveHours,
+            color: selectedStampPattern.color,
+            bgColor: selectedStampPattern.bgColor,
+            note: ''
+          };
+          setShifts(prev => [...prev.filter(s => s.date !== dateStr), newShift]);
+        } else {
+          setEditingShift(currentShift || {
+            date: dateStr, shiftName: shiftPatterns[0].name, startTime: shiftPatterns[0].startTime, endTime: shiftPatterns[0].endTime, breakTime: shiftPatterns[0].breakTime, paidLeaveHours: shiftPatterns[0].paidLeaveHours, color: shiftPatterns[0].color, bgColor: shiftPatterns[0].bgColor, note: ''
+          });
+          setIsModalOpen(true);
+        }
+      };
+
+      const savePattern = () => {
+        if (!editingPattern.name.trim()) return;
+        setShiftPatterns(prev => prev.map(p => p.id === editingPattern.id ? editingPattern : p));
+        setIsPatternModalOpen(false);
+        showToast('シフトパターンを更新しました', 'success');
+      };
+
+      const deletePattern = (id) => {
+        if (shiftPatterns.length <= 1) {
+          showToast('最低1つのシフトが必要です', 'error');
+          return;
+        }
+        setShiftPatterns(prev => prev.filter(p => p.id !== id));
+        setIsPatternModalOpen(false);
+        showToast('シフトパターンを削除しました', 'info');
+      };
+
+      return (
+        <div className="h-full w-full flex flex-col justify-between overflow-hidden bg-slate-100">
+          {toastMessage && (
+            <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-xl shadow-2xl text-xs font-bold text-white transition-all ${
+              toastMessage.type === 'error' ? 'bg-rose-600' : toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-indigo-600'
+            }`}>
+              {toastMessage.msg}
+            </div>
+          )}
+
+          <header className="top-safe-area bg-white border-b border-slate-200/80 px-4 pb-3 pt-2 shrink-0 flex items-center justify-between z-20 shadow-xs">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition">&lt;</button>
+              <h1 className="text-base font-black text-slate-900 tracking-tight px-1">{year}年 {month + 1}月</h1>
+              <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition">&gt;</button>
+            </div>
+            
+            <button
+              onClick={() => {
+                setStampModeActive(!stampModeActive);
+                if (!stampModeActive && !selectedStampPattern) {
+                  setSelectedStampPattern(shiftPatterns[0]);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95 ${
+                stampModeActive ? 'bg-emerald-600 text-white hover:bg-emerald-700 ring-2 ring-emerald-500/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <Icons.CursorClick />
+              <span>{stampModeActive ? 'タップで入力中' : '連続タップ入力'}</span>
+            </button>
+          </header>
+
+          <main className="flex-1 w-full flex flex-col px-3 py-2.5 overflow-hidden">
+            {activeTab === 'calendar' && (
+              <div className="h-full w-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-3 overflow-hidden relative">
+                
+                {stampModeActive ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-3 py-2 mb-2 shrink-0 animate-in fade-in">
+                    <div className="text-[11px] font-bold text-emerald-800 mb-1 flex items-center justify-between">
+                      <span>👇 塗りたいシフトを選んで、カレンダーをタップ！</span>
+                      <button onClick={() => setStampModeActive(false)} className="text-emerald-600 underline">終了</button>
+                    </div>
+                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                      {shiftPatterns.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => setSelectedStampPattern(p)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition ${
+                            selectedStampPattern?.id === p.id ? 'ring-2 ring-emerald-500 shadow-md scale-105' : 'opacity-70 scale-95'
+                          }`}
+                          style={{ backgroundColor: p.bgColor, color: p.color }}
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gradient-to-r from-pink-50 via-rose-50 to-pink-50 border border-pink-200/80 rounded-2xl px-4 py-2.5 mb-2.5 shrink-0 flex items-center justify-between shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-pink-600 text-white flex items-center justify-center shadow-xs"><Icons.Palmtree /></div>
+                      <div>
+                        <div className="text-[11px] font-bold text-slate-500 leading-none">残り有給休暇</div>
+                        <div className="flex items-baseline gap-1 mt-0.5">
+                          <span className="text-2xl font-black text-pink-600 tracking-tight">{paidLeaveStats.remainingDays}</span><span className="text-xs font-bold text-pink-700">日</span>
+                          {paidLeaveStats.remainingExtraHours > 0 && (<><span className="text-xl font-black text-pink-600 ml-1">{paidLeaveStats.remainingExtraHours}</span><span className="text-xs font-bold text-pink-700">時間</span></>)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right pl-2 border-l border-pink-200/60">
+                      <div className="text-[10px] text-slate-400 font-medium">総残計 {paidLeaveStats.remainingHours}h</div>
+                      <div className="text-[11px] font-bold text-slate-700 mt-0.5">今月取得: <span className="text-pink-600 font-extrabold">{paidLeaveStats.monthlyHoursConsumed}h</span></div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-7 text-center text-xs font-black text-slate-400 pb-1.5 border-b border-slate-100 shrink-0">
+                  <span className="text-rose-500">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span className="text-blue-500">土</span>
+                </div>
+
+                <div className="grid grid-cols-7 flex-1 w-full gap-1.5 mt-2 overflow-hidden" style={{ gridTemplateRows: `repeat(${totalWeeks}, minmax(0, 1fr))` }}>
+                  {calendarDays.map((item, idx) => {
+                    if (!item) return <div key={`empty-${idx}`} className="bg-slate-50/40 rounded-2xl" />;
+                    const isToday = item.dateStr === toLocalDateStr(new Date());
+                    const shift = item.shift;
+                    const hasPaid = shift && shift.paidLeaveHours > 0;
+                    const dayOfWeek = (idx % 7);
+
+                    return (
+                      <div
+                        key={item.dateStr}
+                        onClick={(e) => handleDateClick(item.dateStr, shift, e)}
+                        className={`p-1.5 rounded-2xl border flex flex-col justify-between cursor-pointer transition ${
+                          isToday ? 'border-indigo-500 bg-indigo-50/30 ring-2 ring-indigo-500/20' : hasPaid ? 'border-pink-200 bg-pink-50/40' : 'border-slate-100 bg-white shadow-2xs'
+                        } ${stampModeActive ? 'active:scale-90 hover:border-emerald-300' : 'active:scale-95 hover:border-indigo-300'}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[12px] font-black w-5 h-5 flex items-center justify-center rounded-full ${
+                            isToday ? 'bg-indigo-600 text-white shadow-xs' : dayOfWeek === 0 ? 'text-rose-600' : dayOfWeek === 6 ? 'text-blue-600' : 'text-slate-700'
+                          }`}>{item.day}</span>
+                          {hasPaid && <span className="text-[9px] font-black text-pink-600 bg-pink-100 px-1 py-0.2 rounded-md">有休</span>}
+                        </div>
+                        {shift && shift.shiftName !== '公休' ? (
+                          <div className="rounded-xl px-1.5 py-0.5 text-center flex flex-col justify-center overflow-hidden" style={{ backgroundColor: shift.bgColor || '#EFF6FF' }}>
+                            <span className="text-[11px] font-black leading-tight truncate" style={{ color: shift.color || '#2563EB' }}>{shift.shiftName}</span>
+                            <span className="text-[9px] font-bold text-slate-500 leading-none truncate mt-0.5">{hasPaid ? `-${shift.paidLeaveHours}h` : shift.startTime ? `${shift.startTime.slice(0, 5)}` : '休'}</span>
+                          </div>
+                        ) : <div className="h-4" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ========== TAB: 写真スキャン（超安定・非クラッシュ版） ========== */}
+            {activeTab === 'scan' && (
+              <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-4 space-y-3 overflow-y-auto no-scrollbar">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">シフト表写真の自動スキャン</h2>
+                  <p className="text-[11px] text-slate-500 mt-0.5">クラッシュ防止のため自動軽量化処理を挟みます</p>
+                </div>
+
+                {!compressedImageData && (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 border-2 border-dashed border-pink-300 bg-pink-50/30 hover:bg-pink-50/60 rounded-3xl p-5 text-center cursor-pointer flex flex-col items-center justify-center min-h-[200px] transition"
+                  >
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                    <div className="w-14 h-14 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xs">
+                      <Icons.Camera />
+                    </div>
+                    <span className="text-sm font-bold text-slate-700 block">写真を選択 / 撮影する</span>
+                    <span className="text-xs text-slate-400 block mt-1">ライブラリから選ぶだけで自動で最適化されます</span>
+                  </div>
+                )}
+
+                {compressedImageData && !scanResults.length && (
+                  <div className="flex-1 flex flex-col items-center justify-center space-y-3">
+                    <p className="text-xs font-bold text-slate-700">読み込み完了！AI解析を行えます</p>
+                    <img src={compressedImageData.preview} alt="プレビュー" className="w-full border border-slate-200 rounded-2xl shadow-xs max-h-48 object-contain bg-slate-50" />
+                    
+                    <button
+                      onClick={handleScanShiftTable}
+                      disabled={isScanning}
+                      className={`w-full py-3.5 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2 shadow-sm transition ${
+                        isScanning ? 'bg-slate-300' : 'bg-gradient-to-r from-pink-600 to-indigo-600 active:scale-98'
+                      }`}
+                    >
+                      <Icons.Sparkles />
+                      <span>{isScanning ? 'AIが解析中...' : 'この画像をAIで解析する'}</span>
+                    </button>
+                    <button onClick={() => setCompressedImageData(null)} className="text-xs text-slate-500 underline mt-1">
+                      別の写真を選び直す
+                    </button>
+                  </div>
+                )}
+
+                {scanMessage && <p className="text-xs text-rose-600 font-bold p-3 bg-rose-50 rounded-xl border border-rose-100 break-words">{scanMessage}</p>}
+
+                {scanResults.length > 0 && (
+                  <div className="border-t border-slate-100 pt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900">抽出結果 ({scanResults.length}件)</span>
+                      <button onClick={handleApplyScan} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-sm transition">カレンダーに登録</button>
+                    </div>
+                    <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
+                      {scanResults.map((item, idx) => (
+                        <div key={item.id} className="py-2 flex items-center justify-between text-xs">
+                          <span className="font-bold">{item.date.slice(5)}</span>
+                          <span className="font-bold text-indigo-600">{item.shiftName}</span>
+                          {item.paidLeaveHours > 0 ? (
+                            <span className="text-pink-600 font-bold">有休{item.paidLeaveHours}h</span>
+                          ) : (
+                            <span className="text-slate-500">{item.startTime}-{item.endTime}</span>
+                          )}
+                          <button onClick={() => setScanResults(prev => prev.filter((_, i) => i !== idx))} className="text-slate-400 hover:text-rose-500 p-1"><Icons.Trash /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ========== TAB: 設定 ========== */}
+            {activeTab === 'settings' && (
+              <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 space-y-4 overflow-y-auto no-scrollbar">
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-1.5 text-blue-800 font-bold text-sm">
+                    <Icons.Key />
+                    <span>Gemini APIキー (AI利用に必須)</span>
+                  </div>
+                  <p className="text-[11px] text-blue-600 leading-tight">
+                    GitHub PagesでAIスキャンを動かすにはAPIキーが必要です。<br/>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" className="underline font-bold text-blue-800">Google AI Studio</a>から無料で取得して、下に貼り付けてください。
+                  </p>
+                  <input
+                    type="password"
+                    value={userApiKey}
+                    onChange={handleApiKeyChange}
+                    placeholder="AIzaSy..."
+                    className="w-full bg-white border border-blue-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {/* Fix #6: ローカル保存であることと共有端末での注意点を明示 */}
+                  <p className="text-[10px] text-blue-500 leading-tight bg-blue-100/60 rounded-lg px-2 py-1.5">
+                    ⚠️ このキーはあなたの端末のブラウザ内にのみ保存され、サーバーには送信されません。共有・公共のパソコンでは入力後、使用後にこの欄を空にして保存し直すことをおすすめします。
+                  </p>
+                </div>
+
+                <h2 className="text-base font-bold text-slate-900 mt-2">シフト・有給設定</h2>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">1日の所定労働時間 (有休1日の時間数)</label>
+                  <div className="flex items-center gap-2">
+                    <input type="number" value={workHoursPerDay} onChange={(e) => setWorkHoursPerDay(Number(e.target.value))} className="w-24 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                    <span className="text-xs font-bold text-slate-600">時間 / 日</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">現在の保有日数</label>
+                    <input type="number" value={basePaidLeaveDays} onChange={(e) => setBasePaidLeaveDays(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">年次付与日数</label>
+                    <input type="number" value={grantAmountDays} onChange={(e) => setGrantAmountDays(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                  </div>
+                </div>
+
+                {/* Fix #5: 付与月日・基準年を設定できるUIを追加(バグ修正の副産物として、1〜6の動作確認をしやすくするため同梱) */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">基準年</label>
+                    <input type="number" value={baseYear} onChange={(e) => setBaseYear(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">付与月</label>
+                    <input type="number" min="1" max="12" value={grantMonth} onChange={(e) => setGrantMonth(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">付与日</label>
+                    <input type="number" min="1" max="31" value={grantDay} onChange={(e) => setGrantDay(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  <h3 className="text-xs font-black text-slate-800">シフトパターン（タップで編集・削除）</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {shiftPatterns.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => { setEditingPattern(p); setIsPatternModalOpen(true); }}
+                        className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs hover:bg-slate-100 active:scale-95 transition text-left"
+                      >
+                        <span className="font-bold" style={{ color: p.color }}>{p.name}</span>
+                        <div className="flex items-center gap-1 text-slate-400">
+                          <span className="text-[10px]">{p.startTime ? `${p.startTime}-${p.endTime}` : `${p.paidLeaveHours}h`}</span>
+                          <Icons.Pencil />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 pt-1 pb-4">
+                    <input
+                      type="text"
+                      placeholder="新規シフト名(例: 夜勤)"
+                      value={newPatternName}
+                      onChange={(e) => setNewPatternName(e.target.value)}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!newPatternName.trim()) return;
+                        setShiftPatterns(prev => [...prev, {
+                          id: `custom-${Date.now()}`,
+                          name: newPatternName.trim(),
+                          symbol: newPatternName.trim().slice(0, 2),
+                          startTime: '09:00',
+                          endTime: '18:00',
+                          breakTime: 60,
+                          color: '#4F46E5',
+                          bgColor: '#EEF2FF',
+                          paidLeaveHours: 0
+                        }]);
+                        setNewPatternName('');
+                        showToast('シフトパターンを追加しました', 'success');
+                      }}
+                      className="bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-xl shrink-0"
+                    >追加</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* カレンダーの日付タップ時のシフト編集モーダル */}
+          {isModalOpen && editingShift && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+              <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-sm p-5 space-y-3.5 max-h-[85vh] overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900">シフトの編集・カレンダー同期</h3>
+                  <button onClick={() => setIsModalOpen(false)} className="text-slate-400 p-1"><Icons.Close /></button>
+                </div>
+
+                <input
+                  type="date"
+                  value={editingShift.date}
+                  onChange={(e) => setEditingShift(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold"
+                />
+
+                <div className="grid grid-cols-4 gap-1.5">
+                  {shiftPatterns.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setEditingShift(prev => ({
+                        ...prev, shiftName: p.name, startTime: p.startTime, endTime: p.endTime, breakTime: p.breakTime, paidLeaveHours: p.paidLeaveHours, color: p.color, bgColor: p.bgColor
+                      }))}
+                      className={`py-2 rounded-xl text-xs font-bold border transition ${
+                        editingShift.shiftName === p.name ? 'border-pink-600 bg-pink-50 text-pink-600' : 'border-slate-200 bg-white text-slate-700'
+                      }`}
+                    >{p.name}</button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setEditingShift(prev => ({
+                        ...prev, shiftName: '公休', startTime: '', endTime: '', breakTime: 0, paidLeaveHours: 0, color: '#64748B', bgColor: '#F1F5F9'
+                    }))}
+                    className={`py-2 rounded-xl text-xs font-bold border transition ${
+                      editingShift.shiftName === '公休' ? 'border-pink-600 bg-pink-50 text-pink-600' : 'border-slate-200 bg-white text-slate-700'
+                    }`}
+                  >公休</button>
+                </div>
+
+                <div className="bg-pink-50/60 p-3 rounded-2xl border border-pink-100">
+                  <div className="flex justify-between text-xs font-bold text-slate-800 mb-2">
+                    <span>有給休暇の消費</span>
+                    <span className="text-pink-600 font-extrabold">{editingShift.paidLeaveHours || 0} 時間</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2, 4, 8].map(h => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setEditingShift(prev => ({ ...prev, paidLeaveHours: h }))}
+                        className={`flex-1 py-1.5 rounded-xl text-xs font-bold border transition ${
+                          editingShift.paidLeaveHours === h ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-slate-600 border-slate-200'
+                        }`}
+                      >{h === 0 ? 'なし' : `${h}h`}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {editingShift.paidLeaveHours < workHoursPerDay && editingShift.shiftName !== '公休' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="time" value={editingShift.startTime} onChange={(e) => setEditingShift(prev => ({ ...prev, startTime: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                    <input type="time" value={editingShift.endTime} onChange={(e) => setEditingShift(prev => ({ ...prev, endTime: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                  </div>
+                )}
+
+                <div className="pt-1 space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-400 block">スマホのカレンダーに追加</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => handleSyncCalendar(editingShift, 'google')} className="py-2 px-3 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-blue-100 transition">
+                      <Icons.ExternalLink /><span>Google</span>
+                    </button>
+                    <button type="button" onClick={() => handleSyncCalendar(editingShift, 'apple')} className="py-2 px-3 rounded-xl bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-slate-100 transition">
+                      <Icons.ExternalLink /><span>Apple/Outlook</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50">キャンセル</button>
+                  <button
+                    onClick={() => {
+                      setShifts(prev => {
+                        const newArray = prev.filter(s => s.date !== editingShift.date);
+                        return [...newArray, { ...editingShift, id: editingShift.id || `s-${Date.now()}` }];
+                      });
+                      setIsModalOpen(false);
+                      showToast('シフトを保存しました', 'success');
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition"
+                  >保存</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* シフトパターンの編集・削除モーダル */}
+          {isPatternModalOpen && editingPattern && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900">シフトパターンの編集</h3>
+                  <button onClick={() => setIsPatternModalOpen(false)} className="text-slate-400 p-1"><Icons.Close /></button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">シフト名</label>
+                    <input
+                      type="text"
+                      value={editingPattern.name}
+                      onChange={e => setEditingPattern(prev => ({...prev, name: e.target.value}))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">開始時間</label>
+                      <input
+                        type="time"
+                        value={editingPattern.startTime}
+                        onChange={e => setEditingPattern(prev => ({...prev, startTime: e.target.value}))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">終了時間</label>
+                      <input
+                        type="time"
+                        value={editingPattern.endTime}
+                        onChange={e => setEditingPattern(prev => ({...prev, endTime: e.target.value}))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">デフォルト有給消費 (時間)</label>
+                    <select
+                      value={editingPattern.paidLeaveHours}
+                      onChange={e => setEditingPattern(prev => ({...prev, paidLeaveHours: Number(e.target.value)}))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold"
+                    >
+                      {[0, 1, 2, 4, 8].map(h => <option key={h} value={h}>{h === 0 ? 'なし' : `${h}時間`}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    onClick={() => deletePattern(editingPattern.id)}
+                    className="py-2.5 px-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
+                    title="削除"
+                  >
+                    <Icons.Trash />
+                  </button>
+                  <button
+                    onClick={() => setIsPatternModalOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >キャンセル</button>
+                  <button
+                    onClick={savePattern}
+                    className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition"
+                  >更新する</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <nav className="bottom-safe-area bg-white border-t border-slate-200 shrink-0 px-4 pt-2.5 flex justify-around shadow-lg z-20">
+            <button onClick={() => setActiveTab('calendar')} className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'calendar' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}>
+              <Icons.Calendar /><span className="text-[10px]">カレンダー</span>
+            </button>
+            <button onClick={() => setActiveTab('scan')} className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'scan' ? 'text-pink-600 font-black' : 'text-slate-400'}`}>
+              <Icons.Camera /><span className="text-[10px]">写真スキャン</span>
+            </button>
+            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'settings' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}>
+              <Icons.Settings /><span className="text-[10px]">設定</span>
+            </button>
+          </nav>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+
+</body>
+</html>
