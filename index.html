@@ -53,8 +53,6 @@
       border: 2px solid #EC4899 !important;
       background-color: rgba(236, 72, 153, 0.2) !important;
     }
-    
-    /* スタンプモード時のアニメーション */
     @keyframes stampBounce {
       0% { transform: scale(1); }
       50% { transform: scale(0.9); }
@@ -71,33 +69,8 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useCallback } = React;
 
-    // Reactエラーバウンダリ（万が一のエラー時も画面が真っ白になるのを防ぐ）
-    class ErrorBoundary extends React.Component {
-      constructor(props) {
-        super(props);
-        this.state = { hasError: false, error: null };
-      }
-      static getDerivedStateFromError(error) {
-        return { hasError: true, error };
-      }
-      render() {
-        if (this.state.hasError) {
-          return (
-            <div className="flex flex-col items-center justify-center h-full p-6 text-center bg-slate-50">
-              <h2 className="text-lg font-bold text-rose-600 mb-2">画面の描画エラーが発生しました</h2>
-              <p className="text-xs text-slate-500 mb-4">{this.state.error?.toString()}</p>
-              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm">アプリを再読み込み</button>
-            </div>
-          );
-        }
-        return this.props.children;
-      }
-    }
-
-    // ReactCropコンポーネントの安全な呼び出し（UMDモジュールのオブジェクト対応）
-    const CropUI = window.ReactCrop ? (window.ReactCrop.ReactCrop || window.ReactCrop.default || window.ReactCrop) : 'div';
-
-    const apiKey = ""; // Gemini APIキーをここに入力してください
+    // システムデフォルトのAPIキー（Canvas環境用）
+    const defaultApiKey = "";
 
     const Icons = {
       Calendar: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>,
@@ -111,7 +84,8 @@
       ExternalLink: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>,
       Scissors: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2-2m-2-2l-2-2a3 3 0 10-4.243 4.243l2 2m4 4l2 2a3 3 0 104.243-4.243l-2-2m-4-4l2-2"/></svg>,
       CursorClick: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>,
-      Pencil: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+      Pencil: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>,
+      Key: () => <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
     };
 
     const DEFAULT_SHIFT_PATTERNS = [
@@ -125,9 +99,11 @@
 
     function App() {
       const [activeTab, setActiveTab] = useState('calendar');
+      
+      // ユーザー固有のAPIキーをlocalStorageから読み込む
+      const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('shift_snap_api_key') || '');
 
       const [targetName, setTargetName] = useState('中野 優希');
-      const [targetAliases, setTargetAliases] = useState('中野, 中野優希, 優希');
       const [workHoursPerDay, setWorkHoursPerDay] = useState(8);
       const [shiftPatterns, setShiftPatterns] = useState(DEFAULT_SHIFT_PATTERNS);
 
@@ -156,11 +132,9 @@
       const imgRef = useRef(null);
       const fileInputRef = useRef(null);
 
-      // モーダル (シフト追加/編集)
+      // モーダル
       const [editingShift, setEditingShift] = useState(null);
       const [isModalOpen, setIsModalOpen] = useState(false);
-
-      // モーダル (パターン編集)
       const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
       const [editingPattern, setEditingPattern] = useState(null);
       const [newPatternName, setNewPatternName] = useState('');
@@ -168,6 +142,12 @@
       const showToast = (msg, type = 'info') => {
         setToastMessage({ msg, type });
         setTimeout(() => setToastMessage(null), 3000);
+      };
+
+      const handleApiKeyChange = (e) => {
+        const val = e.target.value;
+        setUserApiKey(val);
+        localStorage.setItem('shift_snap_api_key', val);
       };
 
       const calculatePaidLeave = () => {
@@ -201,71 +181,48 @@
         const remainingExtraHours = Math.round((remainingHours % workHoursPerDay) * 10) / 10;
 
         return {
-          totalHoursAvailable,
-          totalHoursConsumed,
-          monthlyHoursConsumed,
-          remainingHours,
-          remainingDays,
-          remainingExtraHours
+          totalHoursAvailable, totalHoursConsumed, monthlyHoursConsumed, remainingHours, remainingDays, remainingExtraHours
         };
       };
       const paidLeaveStats = calculatePaidLeave();
 
-      // 画像選択と自動リサイズ（スマホの高画質写真によるメモリクラッシュ/ホワイトアウト防止）
+      // 画像を読み込み、巨大な場合はCanvasで縮小（最大2500px）してクラッシュを防ぐ
       const handleImageChange = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        try {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-              // 📱 スマホの高画質写真によるメモリクラッシュを防ぐため自動リサイズ
-              // 📱 横長のシフト表の文字が潰れないように、解像度の上限を大きく引き上げ
-              const MAX_WIDTH = 2500;
-              const MAX_HEIGHT = 2500;
-              let width = img.width;
-              let height = img.height;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            const MAX_SIZE = 2500;
+            let width = img.width;
+            let height = img.height;
 
-              if (width > height) {
-                if (width > MAX_WIDTH) {
-                  height *= MAX_WIDTH / width;
-                  width = MAX_WIDTH;
-                }
-              } else {
-                if (height > MAX_HEIGHT) {
-                  width *= MAX_HEIGHT / height;
-                  height = MAX_HEIGHT;
-                }
-              }
+            if (width > height && width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            } else if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
 
-              const canvas = document.createElement('canvas');
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-              
-              // 描画して軽量なJPEGに圧縮 (画質を0.8 -> 0.95に上げて文字の潰れを防ぐ)
-              ctx.drawImage(img, 0, 0, width, height);
-              const compressedBase64 = canvas.toDataURL('image/jpeg', 0.95);
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
 
-              setSelectedImage(compressedBase64);
-              setIsCropping(true); 
-              setCroppedImageBase64(null);
-              setScanResults([]);
-              setScanMessage('');
-            };
-            img.onerror = () => {
-              showToast('画像の読み込みに失敗しました', 'error');
-            };
-            img.src = event.target.result;
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.9);
+            setSelectedImage(compressedBase64);
+            setIsCropping(true); 
+            setCroppedImageBase64(null);
+            setScanResults([]);
+            setScanMessage('');
           };
-          reader.readAsDataURL(file);
-        } catch (err) {
-          console.error(err);
-          showToast('画像の処理中にエラーが発生しました', 'error');
-        }
-        
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
         e.target.value = null;
       };
 
@@ -278,7 +235,6 @@
           showToast('切り抜く範囲を選択してください', 'error');
           return;
         }
-
         const canvas = document.createElement('canvas');
         const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
         const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
@@ -312,31 +268,32 @@
           showToast('画像が切り抜かれていません', 'error');
           return;
         }
+        
+        const activeApiKey = userApiKey || defaultApiKey;
+        if (!activeApiKey) {
+          showToast('APIキーが設定されていません。設定タブから入力してください。', 'error');
+          return;
+        }
 
         setIsScanning(true);
-        setScanMessage('切り抜かれた1行をAIが解析中...');
+        setScanMessage('AIが画像を解析中...');
         setScanResults([]);
 
         try {
           const year = currentDate.getFullYear();
           const month = currentDate.getMonth() + 1;
-          const lastDay = new Date(year, month, 0).getDate(); // その月の日数（28〜31）
 
-          const systemPrompt = `あなたはシフト表解析の専門AIです。
-【重要】提供される画像は「特定の個人の1ヶ月分のシフト行だけ」を横長に切り抜いたものであり、画像内に「1日、2日...」といった日付の数字は写っていません。
-しかし、マス目は左から右へ「1日、2日、3日...」と順番に並んでいます。
+          // AIへの強制命令（一番左が1日）
+          const systemPrompt = `あなたはOCRスペシャリストです。提供された画像は、勤務シフト表の「特定の個人の1ヶ月分（1日〜末日）のシフト記号」が横一列に並んだ画像です。
+【重要】画像内に日付の数字（1, 2, 3...）が写っていなくても、一番左のマスを必ず「1日」とし、そこから右へ向かって2日、3日...と順番に数えて読み取ってください。
+空白や斜線（/）などは「公休」として扱ってください。
+登録されているシフトパターン: ${JSON.stringify(shiftPatterns.map(p => ({ name: p.name, symbol: p.symbol, hours: p.paidLeaveHours })))}
+対象年月: ${year}年${month}月
 
-【あなたのタスク】
-1. 画像の左端のマスから右へ向かって、順番にシフト記号（または空欄・斜線）を読み取ってください。
-2. 対象年月は ${year}年${month}月 です。必ず左から順にカウントし、この月の日数分（${lastDay}日間）のデータを作成してください。
-3. 空欄、斜線（/）、判読できないマスはすべて「公休」として扱い、絶対にスキップ（無視）しないでください。スキップすると日付がズレてしまいます。
-
-登録されているシフトパターン: ${JSON.stringify(shiftPatterns.map(p => ({ name: p.name, symbol: p.symbol })))}
-
-必ず以下のJSON形式のみで出力してください（マークダウンの \`\`\`json 等は絶対に含めないでください）:
+必ず以下のJSON形式のみで出力してください。Markdownの装飾(\`\`\`jsonなど)は絶対に含めないでください:
 {
   "shifts": [
-    { "date": "YYYY-MM-DD", "shiftName": "読み取った記号(または公休)" }
+    { "date": "YYYY-MM-DD", "shiftName": "読み取った記号", "startTime": "HH:MM", "endTime": "HH:MM", "paidLeaveHours": 数値, "note": "" }
   ]
 }`;
 
@@ -344,55 +301,34 @@
             contents: [{
               role: "user",
               parts: [
-                { text: `左端のマスを1日として、順に ${year}年${month}月 の末日までのシフトを抽出してください。` },
+                { text: `左端のマスを ${year}年${month}月1日 とし、右へ順に末日までシフトを抽出してください。` },
                 { inlineData: { mimeType: croppedImageBase64.mimeType, data: croppedImageBase64.data } }
               ]
             }],
             systemInstruction: { parts: [{ text: systemPrompt }] },
             generationConfig: {
               responseMimeType: "application/json",
-              responseSchema: {
-                type: "OBJECT",
-                properties: {
-                  shifts: {
-                    type: "ARRAY",
-                    items: {
-                      type: "OBJECT",
-                      properties: {
-                        date: { type: "STRING" },
-                        shiftName: { type: "STRING" },
-                        startTime: { type: "STRING" },
-                        endTime: { type: "STRING" },
-                        paidLeaveHours: { type: "NUMBER" },
-                        note: { type: "STRING" }
-                      },
-                      required: ["date", "shiftName"]
-                    }
-                  }
-                },
-                required: ["shifts"]
-              }
             }
           };
 
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${activeApiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
           
+          const data = await res.json();
+
           if (!res.ok) {
-            const errBody = await res.text();
-            throw new Error(`API Error: ${res.status} ${errBody}`);
+            console.error("API Error Response:", data);
+            throw new Error(data.error?.message || `HTTP ${res.status}`);
           }
           
-          const data = await res.json();
           let parsedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (!parsedText) throw new Error('AIからデータが返されませんでした');
+          if (!parsedText) throw new Error('解析結果が空でした');
           
-          // AIがマークダウン（```json ... ```）で返してくるケースを防ぐためのクリーンアップ
-          parsedText = parsedText.replace(/```json/gi, '').replace(/```/g, '').trim();
-          
+          // JSONから余計なマークダウン記号を剥がす
+          parsedText = parsedText.replace(/```json/g, '').replace(/```/g, '').trim();
           const parsed = JSON.parse(parsedText);
 
           const list = (parsed.shifts || []).map((s, idx) => {
@@ -421,8 +357,8 @@
             showToast(`${list.length}件抽出成功！`, 'success');
           }
         } catch (e) {
-          console.error(e);
-          setScanMessage(`スキャン失敗: ${e.message}`);
+          console.error("Scan Error:", e);
+          setScanMessage(`スキャンに失敗しました: ${e.message}`);
           showToast('スキャンエラー', 'error');
         } finally {
           setIsScanning(false);
@@ -454,7 +390,6 @@
         window.open(url, '_blank');
       };
 
-      // カレンダーの日付生成
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       const firstDay = new Date(year, month, 1).getDay();
@@ -468,10 +403,8 @@
       while (calendarDays.length % 7 !== 0) calendarDays.push(null);
       const totalWeeks = calendarDays.length / 7;
 
-      // 日付タップ時の処理（スタンプモード or 編集モーダル）
       const handleDateClick = (dateStr, currentShift, e) => {
         if (stampModeActive && selectedStampPattern) {
-          // スタンプアニメーション付与
           const el = e.currentTarget;
           el.classList.add('stamp-click');
           setTimeout(() => el.classList.remove('stamp-click'), 200);
@@ -490,7 +423,6 @@
           };
           setShifts(prev => [...prev.filter(s => s.date !== dateStr), newShift]);
         } else {
-          // 通常の編集モーダルを開く
           setEditingShift(currentShift || {
             date: dateStr, shiftName: shiftPatterns[0].name, startTime: shiftPatterns[0].startTime, endTime: shiftPatterns[0].endTime, breakTime: shiftPatterns[0].breakTime, paidLeaveHours: shiftPatterns[0].paidLeaveHours, color: shiftPatterns[0].color, bgColor: shiftPatterns[0].bgColor, note: ''
           });
@@ -498,7 +430,6 @@
         }
       };
 
-      // パターン保存
       const savePattern = () => {
         if (!editingPattern.name.trim()) return;
         setShiftPatterns(prev => prev.map(p => p.id === editingPattern.id ? editingPattern : p));
@@ -506,7 +437,6 @@
         showToast('シフトパターンを更新しました', 'success');
       };
 
-      // パターン削除
       const deletePattern = (id) => {
         if (shiftPatterns.length <= 1) {
           showToast('最低1つのシフトが必要です', 'error');
@@ -535,7 +465,6 @@
               <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition">&gt;</button>
             </div>
             
-            {/* スタンプモード切り替えトグル */}
             <button
               onClick={() => {
                 setStampModeActive(!stampModeActive);
@@ -556,7 +485,6 @@
             {activeTab === 'calendar' && (
               <div className="h-full w-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-3 overflow-hidden relative">
                 
-                {/* スタンプモード時のパレット表示 */}
                 {stampModeActive ? (
                   <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-3 py-2 mb-2 shrink-0 animate-in fade-in">
                     <div className="text-[11px] font-bold text-emerald-800 mb-1 flex items-center justify-between">
@@ -569,7 +497,7 @@
                           key={p.id}
                           onClick={() => setSelectedStampPattern(p)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition ${
-                            selectedStampPattern?.id === p.id ? 'ring-2 ring-emerald-500 shadow-md' : 'opacity-70'
+                            selectedStampPattern?.id === p.id ? 'ring-2 ring-emerald-500 shadow-md scale-105' : 'opacity-70 scale-95'
                           }`}
                           style={{ backgroundColor: p.bgColor, color: p.color }}
                         >
@@ -623,10 +551,10 @@
                           }`}>{item.day}</span>
                           {hasPaid && <span className="text-[9px] font-black text-pink-600 bg-pink-100 px-1 py-0.2 rounded-md">有休</span>}
                         </div>
-                        {shift ? (
+                        {shift && shift.shiftName !== '公休' ? (
                           <div className="rounded-xl px-1.5 py-0.5 text-center flex flex-col justify-center overflow-hidden" style={{ backgroundColor: shift.bgColor || '#EFF6FF' }}>
                             <span className="text-[11px] font-black leading-tight truncate" style={{ color: shift.color || '#2563EB' }}>{shift.shiftName}</span>
-                            <span className="text-[9px] font-bold text-slate-500 leading-none truncate mt-0.5">{hasPaid ? `-${shift.paidLeaveHours}h` : shift.startTime ? `${shift.startTime.slice(0, 5)}` : '休み'}</span>
+                            <span className="text-[9px] font-bold text-slate-500 leading-none truncate mt-0.5">{hasPaid ? `-${shift.paidLeaveHours}h` : shift.startTime ? `${shift.startTime.slice(0, 5)}` : '休'}</span>
                           </div>
                         ) : <div className="h-4" />}
                       </div>
@@ -636,7 +564,7 @@
               </div>
             )}
 
-            {/* ========== TAB: 写真スキャン (クロップ機能付き) ========== */}
+            {/* ========== TAB: 写真スキャン ========== */}
             {activeTab === 'scan' && (
               <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-4 space-y-3 overflow-y-auto no-scrollbar">
                 <div>
@@ -679,7 +607,7 @@
                   </div>
                 )}
 
-                {scanMessage && <p className="text-xs text-slate-600 p-3 bg-slate-50 rounded-xl border border-slate-100">{scanMessage}</p>}
+                {scanMessage && <p className="text-xs text-rose-600 font-bold p-3 bg-rose-50 rounded-xl border border-rose-100 break-words">{scanMessage}</p>}
 
                 {scanResults.length > 0 && (
                   <div className="border-t border-slate-100 pt-3 space-y-2">
@@ -687,7 +615,6 @@
                       <span className="text-xs font-bold text-slate-900">抽出結果 ({scanResults.length}件)</span>
                       <button onClick={handleApplyScan} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-sm transition">カレンダーに登録</button>
                     </div>
-
                     <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
                       {scanResults.map((item, idx) => (
                         <div key={item.id} className="py-2 flex items-center justify-between text-xs">
@@ -707,10 +634,30 @@
               </div>
             )}
 
-            {/* ========== TAB: 設定（シフト完全編集対応） ========== */}
+            {/* ========== TAB: 設定 ========== */}
             {activeTab === 'settings' && (
               <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 space-y-4 overflow-y-auto no-scrollbar">
-                <h2 className="text-base font-bold text-slate-900">設定・シフトパターン登録</h2>
+                
+                {/* 🔴 追加: APIキー設定パネル */}
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-1.5 text-blue-800 font-bold text-sm">
+                    <Icons.Key />
+                    <span>Gemini APIキー (AI利用に必須)</span>
+                  </div>
+                  <p className="text-[11px] text-blue-600 leading-tight">
+                    GitHub PagesでAIスキャンを動かすにはAPIキーが必要です。<br/>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" className="underline font-bold text-blue-800">Google AI Studio</a>から無料で取得して、下に貼り付けてください。
+                  </p>
+                  <input
+                    type="password"
+                    value={userApiKey}
+                    onChange={handleApiKeyChange}
+                    placeholder="AIzaSy..."
+                    className="w-full bg-white border border-blue-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <h2 className="text-base font-bold text-slate-900 mt-2">シフト・有給設定</h2>
 
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">1日の所定労働時間 (有休1日の時間数)</label>
@@ -749,7 +696,7 @@
                     ))}
                   </div>
 
-                  <div className="flex gap-2 pt-1">
+                  <div className="flex gap-2 pt-1 pb-4">
                     <input
                       type="text"
                       placeholder="新規シフト名(例: 夜勤)"
@@ -786,14 +733,14 @@
           {isCropping && selectedImage && (
             <div className="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-sm flex flex-col">
               <div className="p-4 flex items-center justify-between shrink-0">
-                <span className="text-white font-bold text-sm">自分の行だけを囲んでください</span>
+                <span className="text-white font-bold text-sm">「1日から末日」の行だけを囲む</span>
                 <button onClick={() => { setIsCropping(false); setSelectedImage(null); }} className="text-white p-2"><Icons.Close /></button>
               </div>
               
               <div className="flex-1 overflow-auto flex items-center justify-center p-2">
-                <CropUI crop={crop} onChange={c => setCrop(c)}>
+                <ReactCrop crop={crop} onChange={c => setCrop(c)}>
                   <img src={selectedImage} onLoad={onImageLoad} alt="Crop" className="max-w-full max-h-[70vh]" />
-                </CropUI>
+                </ReactCrop>
               </div>
 
               <div className="p-6 shrink-0 bg-slate-900">
@@ -833,6 +780,16 @@
                       }`}
                     >{p.name}</button>
                   ))}
+                  {/* 公休（クリア）ボタン */}
+                  <button
+                    type="button"
+                    onClick={() => setEditingShift(prev => ({
+                        ...prev, shiftName: '公休', startTime: '', endTime: '', breakTime: 0, paidLeaveHours: 0, color: '#64748B', bgColor: '#F1F5F9'
+                    }))}
+                    className={`py-2 rounded-xl text-xs font-bold border transition ${
+                      editingShift.shiftName === '公休' ? 'border-pink-600 bg-pink-50 text-pink-600' : 'border-slate-200 bg-white text-slate-700'
+                    }`}
+                  >公休</button>
                 </div>
 
                 <div className="bg-pink-50/60 p-3 rounded-2xl border border-pink-100">
@@ -854,7 +811,7 @@
                   </div>
                 </div>
 
-                {editingShift.paidLeaveHours < workHoursPerDay && (
+                {editingShift.paidLeaveHours < workHoursPerDay && editingShift.shiftName !== '公休' && (
                   <div className="grid grid-cols-2 gap-2">
                     <input type="time" value={editingShift.startTime} onChange={(e) => setEditingShift(prev => ({ ...prev, startTime: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
                     <input type="time" value={editingShift.endTime} onChange={(e) => setEditingShift(prev => ({ ...prev, endTime: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
@@ -879,7 +836,6 @@
                     onClick={() => {
                       setShifts(prev => {
                         const newArray = prev.filter(s => s.date !== editingShift.date);
-                        // もし公休で時間0なら削除（スタンプ消去に使える）として扱うことも可能ですが、今回は保存する
                         return [...newArray, { ...editingShift, id: editingShift.id || `s-${Date.now()}` }];
                       });
                       setIsModalOpen(false);
@@ -956,15 +912,11 @@
                   <button
                     onClick={() => setIsPatternModalOpen(false)}
                     className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                  >
-                    キャンセル
-                  </button>
+                  >キャンセル</button>
                   <button
                     onClick={savePattern}
                     className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition"
-                  >
-                    更新する
-                  </button>
+                  >更新する</button>
                 </div>
               </div>
             </div>
@@ -986,12 +938,7 @@
       );
     }
 
-    ReactDOM.render(
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>,
-      document.getElementById('root')
-    );
+    ReactDOM.render(<App />, document.getElementById('root'));
   </script>
 </body>
 </html>
