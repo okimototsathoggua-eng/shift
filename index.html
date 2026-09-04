@@ -222,8 +222,9 @@
             const img = new Image();
             img.onload = () => {
               // 📱 スマホの高画質写真によるメモリクラッシュを防ぐため自動リサイズ
-              const MAX_WIDTH = 1200;
-              const MAX_HEIGHT = 1200;
+              // 📱 横長のシフト表の文字が潰れないように、解像度の上限を大きく引き上げ
+              const MAX_WIDTH = 2500;
+              const MAX_HEIGHT = 2500;
               let width = img.width;
               let height = img.height;
 
@@ -244,9 +245,9 @@
               canvas.height = height;
               const ctx = canvas.getContext('2d');
               
-              // 描画して軽量なJPEGに圧縮
+              // 描画して軽量なJPEGに圧縮 (画質を0.8 -> 0.95に上げて文字の潰れを防ぐ)
               ctx.drawImage(img, 0, 0, width, height);
-              const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+              const compressedBase64 = canvas.toDataURL('image/jpeg', 0.95);
 
               setSelectedImage(compressedBase64);
               setIsCropping(true); 
@@ -319,23 +320,23 @@
         try {
           const year = currentDate.getFullYear();
           const month = currentDate.getMonth() + 1;
+          const lastDay = new Date(year, month, 0).getDate(); // その月の日数（28〜31）
 
           const systemPrompt = `あなたはシフト表解析の専門AIです。
 【重要】提供される画像は「特定の個人の1ヶ月分のシフト行だけ」を横長に切り抜いたものであり、画像内に「1日、2日...」といった日付の数字は写っていません。
-しかし、左端のマスが「1日」、その右隣が「2日」というように、左から右へ順番に並んでいます。
+しかし、マス目は左から右へ「1日、2日、3日...」と順番に並んでいます。
 
 【あなたのタスク】
 1. 画像の左端のマスから右へ向かって、順番にシフト記号（または空欄・斜線）を読み取ってください。
-2. 対象年月は ${year}年${month}月 です。必ず左から順にカウントし、この月の日数分（28〜31個）のデータを作成してください。
-3. 空欄や斜線（/）はすべて「公休」として扱ってください。
-4. 記号が読み取れないマスや空欄も絶対に飛ばさず「公休」としてカウントし、日付のズレを防いでください。
+2. 対象年月は ${year}年${month}月 です。必ず左から順にカウントし、この月の日数分（${lastDay}日間）のデータを作成してください。
+3. 空欄、斜線（/）、判読できないマスはすべて「公休」として扱い、絶対にスキップ（無視）しないでください。スキップすると日付がズレてしまいます。
 
-登録されているシフトパターン: ${JSON.stringify(shiftPatterns.map(p => ({ name: p.name, symbol: p.symbol, hours: p.paidLeaveHours })))}
+登録されているシフトパターン: ${JSON.stringify(shiftPatterns.map(p => ({ name: p.name, symbol: p.symbol })))}
 
-必ず以下のJSON形式のみで出力してください:
+必ず以下のJSON形式のみで出力してください（マークダウンの \`\`\`json 等は絶対に含めないでください）:
 {
   "shifts": [
-    { "date": "YYYY-MM-DD", "shiftName": "読み取った記号(または公休)", "startTime": "HH:MM", "endTime": "HH:MM", "paidLeaveHours": 数値, "note": "" }
+    { "date": "YYYY-MM-DD", "shiftName": "読み取った記号(または公休)" }
   ]
 }`;
 
@@ -380,11 +381,17 @@
             body: JSON.stringify(payload)
           });
           
-          if (!res.ok) throw new Error('API Error');
+          if (!res.ok) {
+            const errBody = await res.text();
+            throw new Error(`API Error: ${res.status} ${errBody}`);
+          }
           
           const data = await res.json();
-          const parsedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (!parsedText) throw new Error('No data');
+          let parsedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!parsedText) throw new Error('AIからデータが返されませんでした');
+          
+          // AIがマークダウン（```json ... ```）で返してくるケースを防ぐためのクリーンアップ
+          parsedText = parsedText.replace(/```json/gi, '').replace(/```/g, '').trim();
           
           const parsed = JSON.parse(parsedText);
 
@@ -414,7 +421,8 @@
             showToast(`${list.length}件抽出成功！`, 'success');
           }
         } catch (e) {
-          setScanMessage('スキャンに失敗しました。APIエラーまたは認識エラーです。');
+          console.error(e);
+          setScanMessage(`スキャン失敗: ${e.message}`);
           showToast('スキャンエラー', 'error');
         } finally {
           setIsScanning(false);
