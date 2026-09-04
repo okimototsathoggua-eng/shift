@@ -71,6 +71,32 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useCallback } = React;
 
+    // Reactエラーバウンダリ（万が一のエラー時も画面が真っ白になるのを防ぐ）
+    class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center bg-slate-50">
+              <h2 className="text-lg font-bold text-rose-600 mb-2">画面の描画エラーが発生しました</h2>
+              <p className="text-xs text-slate-500 mb-4">{this.state.error?.toString()}</p>
+              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm">アプリを再読み込み</button>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    // ReactCropコンポーネントの安全な呼び出し（UMDモジュールのオブジェクト対応）
+    const CropUI = window.ReactCrop ? (window.ReactCrop.ReactCrop || window.ReactCrop.default || window.ReactCrop) : 'div';
+
     const apiKey = ""; // Gemini APIキーをここに入力してください
 
     const Icons = {
@@ -185,7 +211,7 @@
       };
       const paidLeaveStats = calculatePaidLeave();
 
-      // 画像選択と自動リサイズ（ホワイトアウト対策）
+      // 画像選択と自動リサイズ（スマホの高画質写真によるメモリクラッシュ/ホワイトアウト防止）
       const handleImageChange = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -753,9 +779,9 @@
               </div>
               
               <div className="flex-1 overflow-auto flex items-center justify-center p-2">
-                <ReactCrop crop={crop} onChange={c => setCrop(c)}>
+                <CropUI crop={crop} onChange={c => setCrop(c)}>
                   <img src={selectedImage} onLoad={onImageLoad} alt="Crop" className="max-w-full max-h-[70vh]" />
-                </ReactCrop>
+                </CropUI>
               </div>
 
               <div className="p-6 shrink-0 bg-slate-900">
@@ -948,7 +974,12 @@
       );
     }
 
-    ReactDOM.render(<App />, document.getElementById('root'));
+    ReactDOM.render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>,
+      document.getElementById('root')
+    );
   </script>
 </body>
 </html>
