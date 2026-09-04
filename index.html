@@ -21,9 +21,6 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- React Image Crop -->
-  <script src="https://unpkg.com/react-image-crop@10.0.9/dist/ReactCrop.min.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/react-image-crop@10.0.9/dist/ReactCrop.css" />
 
   <style>
     html, body, #root {
@@ -49,10 +46,6 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
-    .ReactCrop__crop-selection {
-      border: 2px solid #EC4899 !important;
-      background-color: rgba(236, 72, 153, 0.2) !important;
-    }
     @keyframes stampBounce {
       0% { transform: scale(1); }
       50% { transform: scale(0.9); }
@@ -67,7 +60,7 @@
   <div id="root" class="h-full w-full"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef, useCallback } = React;
+    const { useState, useEffect, useRef } = React;
 
     const defaultApiKey = "";
 
@@ -81,7 +74,6 @@
       Sparkles: () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clipRule="evenodd"/></svg>,
       Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
       ExternalLink: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>,
-      Scissors: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2-2m-2-2l-2-2a3 3 0 10-4.243 4.243l2 2m4 4l2 2a3 3 0 104.243-4.243l-2-2m-4-4l2-2"/></svg>,
       CursorClick: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>,
       Pencil: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>,
       Key: () => <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
@@ -100,7 +92,6 @@
       const [activeTab, setActiveTab] = useState('calendar');
       const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('shift_snap_api_key') || '');
 
-      const [targetName, setTargetName] = useState('中野 優希');
       const [workHoursPerDay, setWorkHoursPerDay] = useState(8);
       const [shiftPatterns, setShiftPatterns] = useState(DEFAULT_SHIFT_PATTERNS);
 
@@ -116,15 +107,12 @@
       const [stampModeActive, setStampModeActive] = useState(false);
       const [selectedStampPattern, setSelectedStampPattern] = useState(null);
 
-      const [selectedImage, setSelectedImage] = useState(null); 
-      const [croppedImageBase64, setCroppedImageBase64] = useState(null); 
-      const [crop, setCrop] = useState({ unit: '%', width: 90, height: 10, x: 5, y: 45 }); 
-      const [isCropping, setIsCropping] = useState(false); 
+      // 安全な画像データ保持ステート
+      const [compressedImageData, setCompressedImageData] = useState(null);
       const [isScanning, setIsScanning] = useState(false);
       const [scanResults, setScanResults] = useState([]);
       const [scanMessage, setScanMessage] = useState('');
       const [toastMessage, setToastMessage] = useState(null);
-      const imgRef = useRef(null);
       const fileInputRef = useRef(null);
 
       const [editingShift, setEditingShift] = useState(null);
@@ -180,7 +168,7 @@
       };
       const paidLeaveStats = calculatePaidLeave();
 
-      // 🛑 【超重要・クラッシュ防止】選択された瞬間に画像を最大1200pxへ事前縮小
+      // 🛑 【超安全・クラッシュ防止】選択された瞬間に画像を最大1000pxに自動圧縮してメモリを保護
       const handleImageChange = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -189,7 +177,7 @@
         reader.onload = (event) => {
           const img = new Image();
           img.onload = () => {
-            const MAX_WIDTH = 1200;
+            const MAX_WIDTH = 1000;
             let width = img.width;
             let height = img.height;
 
@@ -204,12 +192,15 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
-            setSelectedImage(compressedBase64);
-            setIsCropping(true); 
-            setCroppedImageBase64(null);
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            setCompressedImageData({
+              preview: compressedBase64,
+              base64: compressedBase64.split(',')[1],
+              mimeType: 'image/jpeg'
+            });
             setScanResults([]);
             setScanMessage('');
+            showToast('画像を正常に読み込みました', 'success');
           };
           img.src = event.target.result;
         };
@@ -217,46 +208,9 @@
         e.target.value = null;
       };
 
-      const onImageLoad = useCallback((e) => {
-        imgRef.current = e.currentTarget;
-      }, []);
-
-      const finalizeCrop = () => {
-        if (!imgRef.current || !crop.width || !crop.height) {
-          showToast('切り抜く範囲を選択してください', 'error');
-          return;
-        }
-        const canvas = document.createElement('canvas');
-        const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
-        const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
-        canvas.width = crop.width * scaleX;
-        canvas.height = crop.height * scaleY;
-        const ctx = canvas.getContext('2d');
-
-        ctx.drawImage(
-          imgRef.current,
-          crop.x * scaleX,
-          crop.y * scaleY,
-          crop.width * scaleX,
-          crop.height * scaleY,
-          0,
-          0,
-          crop.width * scaleX,
-          crop.height * scaleY
-        );
-
-        const base64Image = canvas.toDataURL('image/jpeg', 0.9);
-        setCroppedImageBase64({
-          data: base64Image.split(',')[1],
-          mimeType: 'image/jpeg',
-          previewUrl: base64Image
-        });
-        setIsCropping(false);
-      };
-
       const handleScanShiftTable = async () => {
-        if (!croppedImageBase64) {
-          showToast('画像が切り抜かれていません', 'error');
+        if (!compressedImageData) {
+          showToast('画像が選択されていません', 'error');
           return;
         }
         
@@ -267,16 +221,16 @@
         }
 
         setIsScanning(true);
-        setScanMessage('AIが画像を解析中...');
+        setScanMessage('AIがシフト表を解析中...');
         setScanResults([]);
 
         try {
           const year = currentDate.getFullYear();
           const month = currentDate.getMonth() + 1;
 
-          const systemPrompt = `あなたはOCRスペシャリストです。提供された画像は、勤務シフト表の「1ヶ月分（1日〜末日）のシフト記号」が横一列に並んだ画像です。
-一番左のマスを必ず「1日」とし、そこから右へ向かって2日、3日...と順番に数えて読み取ってください。
-空白や斜線（/）などは「公休」として扱ってください。
+          const systemPrompt = `あなたはOCRスペシャリストです。提供された画像は、勤務シフト表の「1ヶ月分（1日〜末日）のシフト」が横一列またはカレンダー状に並んだ画像です。
+左から順に1日、2日...と数えて読み取ってください。
+空白や斜線は「公休」として扱ってください。
 登録されているシフトパターン: ${JSON.stringify(shiftPatterns.map(p => ({ name: p.name, symbol: p.symbol, hours: p.paidLeaveHours })))}
 対象年月: ${year}年${month}月
 
@@ -291,8 +245,8 @@
             contents: [{
               role: "user",
               parts: [
-                { text: `左端のマスを ${year}年${month}月1日 とし、右へ順に末日までシフトを抽出してください。` },
-                { inlineData: { mimeType: croppedImageBase64.mimeType, data: croppedImageBase64.data } }
+                { text: `${year}年${month}月のシフトを1日から末日まで抽出してください。` },
+                { inlineData: { mimeType: compressedImageData.mimeType, data: compressedImageData.base64 } }
               ]
             }],
             systemInstruction: { parts: [{ text: systemPrompt }] },
@@ -308,10 +262,7 @@
           });
           
           const data = await res.json();
-
-          if (!res.ok) {
-            throw new Error(data.error?.message || `HTTP ${res.status}`);
-          }
+          if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
           
           let parsedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (!parsedText) throw new Error('解析結果が空でした');
@@ -357,8 +308,7 @@
         const dates = new Set(scanResults.map(s => s.date));
         setShifts(prev => [...prev.filter(s => !dates.has(s.date)), ...scanResults].sort((a,b) => a.date.localeCompare(b.date)));
         setScanResults([]);
-        setCroppedImageBase64(null);
-        setSelectedImage(null);
+        setCompressedImageData(null);
         setActiveTab('calendar');
         showToast('カレンダーに登録しました！', 'success');
       };
@@ -551,32 +501,32 @@
               </div>
             )}
 
-            {/* ========== TAB: 写真スキャン ========== */}
+            {/* ========== TAB: 写真スキャン（超安定・非クラッシュ版） ========== */}
             {activeTab === 'scan' && (
               <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-4 space-y-3 overflow-y-auto no-scrollbar">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">自分の行だけを切り抜いて確実スキャン</h2>
-                  <p className="text-[11px] text-slate-500 mt-0.5">軽量化処理済みなのでフリーズしません</p>
+                  <h2 className="text-base font-bold text-slate-900">シフト表写真の自動スキャン</h2>
+                  <p className="text-[11px] text-slate-500 mt-0.5">クラッシュ防止のため自動軽量化処理を挟みます</p>
                 </div>
 
-                {!selectedImage && !croppedImageBase64 && (
+                {!compressedImageData && (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex-1 border-2 border-dashed border-pink-300 bg-pink-50/30 hover:bg-pink-50/60 rounded-3xl p-5 text-center cursor-pointer flex flex-col items-center justify-center min-h-[180px] transition"
+                    className="flex-1 border-2 border-dashed border-pink-300 bg-pink-50/30 hover:bg-pink-50/60 rounded-3xl p-5 text-center cursor-pointer flex flex-col items-center justify-center min-h-[200px] transition"
                   >
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
                     <div className="w-14 h-14 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xs">
                       <Icons.Camera />
                     </div>
-                    <span className="text-sm font-bold text-slate-700 block">シフト表の写真を選択</span>
-                    <span className="text-xs text-slate-400 block mt-1">選択すると自動で安全サイズに縮小されます</span>
+                    <span className="text-sm font-bold text-slate-700 block">写真を選択 / 撮影する</span>
+                    <span className="text-xs text-slate-400 block mt-1">ライブラリから選ぶだけで自動で最適化されます</span>
                   </div>
                 )}
 
-                {croppedImageBase64 && !scanResults.length && (
+                {compressedImageData && !scanResults.length && (
                   <div className="flex-1 flex flex-col items-center justify-center space-y-3">
-                    <p className="text-xs font-bold text-slate-700">以下の行を解析します</p>
-                    <img src={croppedImageBase64.previewUrl} alt="切り抜いた画像" className="w-full border-2 border-indigo-200 rounded-lg shadow-sm max-h-48 object-contain" />
+                    <p className="text-xs font-bold text-slate-700">読み込み完了！AI解析を行えます</p>
+                    <img src={compressedImageData.preview} alt="プレビュー" className="w-full border border-slate-200 rounded-2xl shadow-xs max-h-48 object-contain bg-slate-50" />
                     
                     <button
                       onClick={handleScanShiftTable}
@@ -586,10 +536,10 @@
                       }`}
                     >
                       <Icons.Sparkles />
-                      <span>{isScanning ? 'AIが抽出中...' : 'この画像をAIで解析'}</span>
+                      <span>{isScanning ? 'AIが解析中...' : 'この画像をAIで解析する'}</span>
                     </button>
-                    <button onClick={() => { setCroppedImageBase64(null); setSelectedImage(null); }} className="text-xs text-slate-500 underline mt-2">
-                      写真をやり直す
+                    <button onClick={() => setCompressedImageData(null)} className="text-xs text-slate-500 underline mt-1">
+                      別の写真を選び直す
                     </button>
                   </div>
                 )}
@@ -714,28 +664,6 @@
               </div>
             )}
           </main>
-
-          {/* クロップ（切り抜き）モーダル */}
-          {isCropping && selectedImage && (
-            <div className="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-sm flex flex-col">
-              <div className="p-4 flex items-center justify-between shrink-0">
-                <span className="text-white font-bold text-sm">「1日から末日」の行だけを囲む</span>
-                <button onClick={() => { setIsCropping(false); setSelectedImage(null); }} className="text-white p-2"><Icons.Close /></button>
-              </div>
-              
-              <div className="flex-1 overflow-auto flex items-center justify-center p-2">
-                <ReactCrop crop={crop} onChange={c => setCrop(c)}>
-                  <img src={selectedImage} onLoad={onImageLoad} alt="Crop" className="max-w-full max-h-[70vh]" />
-                </ReactCrop>
-              </div>
-
-              <div className="p-6 shrink-0 bg-slate-900">
-                <button onClick={finalizeCrop} className="w-full py-4 rounded-2xl bg-pink-600 text-white text-sm font-bold flex items-center justify-center gap-2">
-                  <Icons.Scissors />切り抜いてOK
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* カレンダーの日付タップ時のシフト編集モーダル */}
           {isModalOpen && editingShift && (
@@ -912,7 +840,7 @@
               <Icons.Calendar /><span className="text-[10px]">カレンダー</span>
             </button>
             <button onClick={() => setActiveTab('scan')} className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'scan' ? 'text-pink-600 font-black' : 'text-slate-400'}`}>
-              <Icons.Camera /><span className="text-[10px]">切り抜きスキャン</span>
+              <Icons.Camera /><span className="text-[10px]">写真スキャン</span>
             </button>
             <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'settings' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}>
               <Icons.Settings /><span className="text-[10px]">設定</span>
