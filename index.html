@@ -391,4 +391,523 @@
 
       // 日付タップ時の処理（スタンプモード or 編集モーダル）
       const handleDateClick = (dateStr, currentShift, e) => {
-        if (stampModeActive && select
+        if (stampModeActive && selectedStampPattern) {
+          // スタンプアニメーション付与
+          const el = e.currentTarget;
+          el.classList.add('stamp-click');
+          setTimeout(() => el.classList.remove('stamp-click'), 200);
+
+          const newShift = {
+            id: currentShift ? currentShift.id : `s-${Date.now()}`,
+            date: dateStr,
+            shiftName: selectedStampPattern.name,
+            startTime: selectedStampPattern.startTime,
+            endTime: selectedStampPattern.endTime,
+            breakTime: selectedStampPattern.breakTime,
+            paidLeaveHours: selectedStampPattern.paidLeaveHours,
+            color: selectedStampPattern.color,
+            bgColor: selectedStampPattern.bgColor,
+            note: ''
+          };
+          setShifts(prev => [...prev.filter(s => s.date !== dateStr), newShift]);
+        } else {
+          // 通常の編集モーダルを開く
+          setEditingShift(currentShift || {
+            date: dateStr, shiftName: shiftPatterns[0].name, startTime: shiftPatterns[0].startTime, endTime: shiftPatterns[0].endTime, breakTime: shiftPatterns[0].breakTime, paidLeaveHours: shiftPatterns[0].paidLeaveHours, color: shiftPatterns[0].color, bgColor: shiftPatterns[0].bgColor, note: ''
+          });
+          setIsModalOpen(true);
+        }
+      };
+
+      // パターン保存
+      const savePattern = () => {
+        if (!editingPattern.name.trim()) return;
+        setShiftPatterns(prev => prev.map(p => p.id === editingPattern.id ? editingPattern : p));
+        setIsPatternModalOpen(false);
+        showToast('シフトパターンを更新しました', 'success');
+      };
+
+      // パターン削除
+      const deletePattern = (id) => {
+        if (shiftPatterns.length <= 1) {
+          showToast('最低1つのシフトが必要です', 'error');
+          return;
+        }
+        setShiftPatterns(prev => prev.filter(p => p.id !== id));
+        setIsPatternModalOpen(false);
+        showToast('シフトパターンを削除しました', 'info');
+      };
+
+      return (
+        <div className="h-full w-full flex flex-col justify-between overflow-hidden bg-slate-100">
+          {toastMessage && (
+            <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-xl shadow-2xl text-xs font-bold text-white transition-all ${
+              toastMessage.type === 'error' ? 'bg-rose-600' : toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-indigo-600'
+            }`}>
+              {toastMessage.msg}
+            </div>
+          )}
+
+          {/* 上部ヘッダー */}
+          <header className="top-safe-area bg-white border-b border-slate-200/80 px-4 pb-3 pt-2 shrink-0 flex items-center justify-between z-20 shadow-xs">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition">&lt;</button>
+              <h1 className="text-base font-black text-slate-900 tracking-tight px-1">{year}年 {month + 1}月</h1>
+              <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition">&gt;</button>
+            </div>
+            
+            {/* スタンプモード切り替えトグル */}
+            <button
+              onClick={() => {
+                setStampModeActive(!stampModeActive);
+                if (!stampModeActive && !selectedStampPattern) {
+                  setSelectedStampPattern(shiftPatterns[0]);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95 ${
+                stampModeActive ? 'bg-emerald-600 text-white hover:bg-emerald-700 ring-2 ring-emerald-500/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <Icons.CursorClick />
+              <span>{stampModeActive ? 'タップで入力中' : '連続タップ入力'}</span>
+            </button>
+          </header>
+
+          <main className="flex-1 w-full flex flex-col px-3 py-2.5 overflow-hidden">
+            {activeTab === 'calendar' && (
+              <div className="h-full w-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-3 overflow-hidden relative">
+                
+                {/* スタンプモード時のパレット表示 */}
+                {stampModeActive ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-3 py-2 mb-2 shrink-0 animate-in fade-in">
+                    <div className="text-[11px] font-bold text-emerald-800 mb-1 flex items-center justify-between">
+                      <span>👇 塗りたいシフトを選んで、カレンダーをタップ！</span>
+                      <button onClick={() => setStampModeActive(false)} className="text-emerald-600 underline">終了</button>
+                    </div>
+                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                      {shiftPatterns.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => setSelectedStampPattern(p)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition ${
+                            selectedStampPattern?.id === p.id ? 'ring-2 ring-emerald-500 shadow-md' : 'opacity-70'
+                          }`}
+                          style={{ backgroundColor: p.bgColor, color: p.color }}
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gradient-to-r from-pink-50 via-rose-50 to-pink-50 border border-pink-200/80 rounded-2xl px-4 py-2.5 mb-2.5 shrink-0 flex items-center justify-between shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-pink-600 text-white flex items-center justify-center shadow-xs"><Icons.Palmtree /></div>
+                      <div>
+                        <div className="text-[11px] font-bold text-slate-500 leading-none">残り有給休暇</div>
+                        <div className="flex items-baseline gap-1 mt-0.5">
+                          <span className="text-2xl font-black text-pink-600 tracking-tight">{paidLeaveStats.remainingDays}</span><span className="text-xs font-bold text-pink-700">日</span>
+                          {paidLeaveStats.remainingExtraHours > 0 && (<><span className="text-xl font-black text-pink-600 ml-1">{paidLeaveStats.remainingExtraHours}</span><span className="text-xs font-bold text-pink-700">時間</span></>)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right pl-2 border-l border-pink-200/60">
+                      <div className="text-[10px] text-slate-400 font-medium">総残計 {paidLeaveStats.remainingHours}h</div>
+                      <div className="text-[11px] font-bold text-slate-700 mt-0.5">今月取得: <span className="text-pink-600 font-extrabold">{paidLeaveStats.monthlyHoursConsumed}h</span></div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-7 text-center text-xs font-black text-slate-400 pb-1.5 border-b border-slate-100 shrink-0">
+                  <span className="text-rose-500">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span className="text-blue-500">土</span>
+                </div>
+
+                <div className="grid grid-cols-7 flex-1 w-full gap-1.5 mt-2 overflow-hidden" style={{ gridTemplateRows: `repeat(${totalWeeks}, minmax(0, 1fr))` }}>
+                  {calendarDays.map((item, idx) => {
+                    if (!item) return <div key={`empty-${idx}`} className="bg-slate-50/40 rounded-2xl" />;
+                    const isToday = item.dateStr === new Date().toISOString().slice(0, 10);
+                    const shift = item.shift;
+                    const hasPaid = shift && shift.paidLeaveHours > 0;
+                    const dayOfWeek = (idx % 7);
+
+                    return (
+                      <div
+                        key={item.dateStr}
+                        onClick={(e) => handleDateClick(item.dateStr, shift, e)}
+                        className={`p-1.5 rounded-2xl border flex flex-col justify-between cursor-pointer transition ${
+                          isToday ? 'border-indigo-500 bg-indigo-50/30 ring-2 ring-indigo-500/20' : hasPaid ? 'border-pink-200 bg-pink-50/40' : 'border-slate-100 bg-white shadow-2xs'
+                        } ${stampModeActive ? 'active:scale-90 hover:border-emerald-300' : 'active:scale-95 hover:border-indigo-300'}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[12px] font-black w-5 h-5 flex items-center justify-center rounded-full ${
+                            isToday ? 'bg-indigo-600 text-white shadow-xs' : dayOfWeek === 0 ? 'text-rose-600' : dayOfWeek === 6 ? 'text-blue-600' : 'text-slate-700'
+                          }`}>{item.day}</span>
+                          {hasPaid && <span className="text-[9px] font-black text-pink-600 bg-pink-100 px-1 py-0.2 rounded-md">有休</span>}
+                        </div>
+                        {shift ? (
+                          <div className="rounded-xl px-1.5 py-0.5 text-center flex flex-col justify-center overflow-hidden" style={{ backgroundColor: shift.bgColor || '#EFF6FF' }}>
+                            <span className="text-[11px] font-black leading-tight truncate" style={{ color: shift.color || '#2563EB' }}>{shift.shiftName}</span>
+                            <span className="text-[9px] font-bold text-slate-500 leading-none truncate mt-0.5">{hasPaid ? `-${shift.paidLeaveHours}h` : shift.startTime ? `${shift.startTime.slice(0, 5)}` : '休み'}</span>
+                          </div>
+                        ) : <div className="h-4" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ========== TAB: 写真スキャン (クロップ機能付き) ========== */}
+            {activeTab === 'scan' && (
+              <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-4 space-y-3 overflow-y-auto no-scrollbar">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">自分の行だけを切り抜いて確実スキャン</h2>
+                  <p className="text-[11px] text-slate-500 mt-0.5">余計な文字を削ることで、AIがほぼ100%正確に読み取ります</p>
+                </div>
+
+                {!selectedImage && !croppedImageBase64 && (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 border-2 border-dashed border-pink-300 bg-pink-50/30 hover:bg-pink-50/60 rounded-3xl p-5 text-center cursor-pointer flex flex-col items-center justify-center min-h-[180px] transition"
+                  >
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                    <div className="w-14 h-14 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xs">
+                      <Icons.Camera />
+                    </div>
+                    <span className="text-sm font-bold text-slate-700 block">シフト表を選択</span>
+                    <span className="text-xs text-slate-400 block mt-1">選んだ後に自分の行だけを切り抜けます</span>
+                  </div>
+                )}
+
+                {croppedImageBase64 && !scanResults.length && (
+                  <div className="flex-1 flex flex-col items-center justify-center space-y-3">
+                    <p className="text-xs font-bold text-slate-700">以下の行を解析します</p>
+                    <img src={croppedImageBase64.previewUrl} alt="切り抜いた画像" className="w-full border-2 border-indigo-200 rounded-lg shadow-sm" />
+                    
+                    <button
+                      onClick={handleScanShiftTable}
+                      disabled={isScanning}
+                      className={`w-full py-3.5 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2 shadow-sm transition ${
+                        isScanning ? 'bg-slate-300' : 'bg-gradient-to-r from-pink-600 to-indigo-600 active:scale-98'
+                      }`}
+                    >
+                      <Icons.Sparkles />
+                      <span>{isScanning ? 'AIが抽出中...' : 'この画像をAIで解析'}</span>
+                    </button>
+                    <button onClick={() => { setCroppedImageBase64(null); setSelectedImage(null); }} className="text-xs text-slate-500 underline mt-2">
+                      写真をやり直す
+                    </button>
+                  </div>
+                )}
+
+                {scanMessage && <p className="text-xs text-slate-600 p-3 bg-slate-50 rounded-xl border border-slate-100">{scanMessage}</p>}
+
+                {scanResults.length > 0 && (
+                  <div className="border-t border-slate-100 pt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900">抽出結果 ({scanResults.length}件)</span>
+                      <button onClick={handleApplyScan} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-sm transition">カレンダーに登録</button>
+                    </div>
+
+                    <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
+                      {scanResults.map((item, idx) => (
+                        <div key={item.id} className="py-2 flex items-center justify-between text-xs">
+                          <span className="font-bold">{item.date.slice(5)}</span>
+                          <span className="font-bold text-indigo-600">{item.shiftName}</span>
+                          {item.paidLeaveHours > 0 ? (
+                            <span className="text-pink-600 font-bold">有休{item.paidLeaveHours}h</span>
+                          ) : (
+                            <span className="text-slate-500">{item.startTime}-{item.endTime}</span>
+                          )}
+                          <button onClick={() => setScanResults(prev => prev.filter((_, i) => i !== idx))} className="text-slate-400 hover:text-rose-500 p-1"><Icons.Trash /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ========== TAB: 設定（シフト完全編集対応） ========== */}
+            {activeTab === 'settings' && (
+              <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 space-y-4 overflow-y-auto no-scrollbar">
+                <h2 className="text-base font-bold text-slate-900">設定・シフトパターン登録</h2>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">1日の所定労働時間 (有休1日の時間数)</label>
+                  <div className="flex items-center gap-2">
+                    <input type="number" value={workHoursPerDay} onChange={(e) => setWorkHoursPerDay(Number(e.target.value))} className="w-24 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                    <span className="text-xs font-bold text-slate-600">時間 / 日</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">現在の保有日数</label>
+                    <input type="number" value={basePaidLeaveDays} onChange={(e) => setBasePaidLeaveDays(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">年次付与日数</label>
+                    <input type="number" value={grantAmountDays} onChange={(e) => setGrantAmountDays(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  <h3 className="text-xs font-black text-slate-800">シフトパターン（タップで編集・削除）</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {shiftPatterns.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => { setEditingPattern(p); setIsPatternModalOpen(true); }}
+                        className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs hover:bg-slate-100 active:scale-95 transition text-left"
+                      >
+                        <span className="font-bold" style={{ color: p.color }}>{p.name}</span>
+                        <div className="flex items-center gap-1 text-slate-400">
+                          <span className="text-[10px]">{p.startTime ? `${p.startTime}-${p.endTime}` : `${p.paidLeaveHours}h`}</span>
+                          <Icons.Pencil />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <input
+                      type="text"
+                      placeholder="新規シフト名(例: 夜勤)"
+                      value={newPatternName}
+                      onChange={(e) => setNewPatternName(e.target.value)}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!newPatternName.trim()) return;
+                        setShiftPatterns(prev => [...prev, {
+                          id: `custom-${Date.now()}`,
+                          name: newPatternName.trim(),
+                          symbol: newPatternName.trim().slice(0, 2),
+                          startTime: '09:00',
+                          endTime: '18:00',
+                          breakTime: 60,
+                          color: '#4F46E5',
+                          bgColor: '#EEF2FF',
+                          paidLeaveHours: 0
+                        }]);
+                        setNewPatternName('');
+                        showToast('シフトパターンを追加しました', 'success');
+                      }}
+                      className="bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-xl shrink-0"
+                    >追加</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* クロップ（切り抜き）モーダル */}
+          {isCropping && selectedImage && (
+            <div className="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-sm flex flex-col">
+              <div className="p-4 flex items-center justify-between shrink-0">
+                <span className="text-white font-bold text-sm">自分の行だけを囲んでください</span>
+                <button onClick={() => { setIsCropping(false); setSelectedImage(null); }} className="text-white p-2"><Icons.Close /></button>
+              </div>
+              
+              <div className="flex-1 overflow-auto flex items-center justify-center p-2">
+                <ReactCrop crop={crop} onChange={c => setCrop(c)}>
+                  <img src={selectedImage} onLoad={onImageLoad} alt="Crop" className="max-w-full max-h-[70vh]" />
+                </ReactCrop>
+              </div>
+
+              <div className="p-6 shrink-0 bg-slate-900">
+                <button onClick={finalizeCrop} className="w-full py-4 rounded-2xl bg-pink-600 text-white text-sm font-bold flex items-center justify-center gap-2">
+                  <Icons.Scissors />切り抜いてOK
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* カレンダーの日付タップ時のシフト編集モーダル */}
+          {isModalOpen && editingShift && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+              <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-sm p-5 space-y-3.5 max-h-[85vh] overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900">シフトの編集・カレンダー同期</h3>
+                  <button onClick={() => setIsModalOpen(false)} className="text-slate-400 p-1"><Icons.Close /></button>
+                </div>
+
+                <input
+                  type="date"
+                  value={editingShift.date}
+                  onChange={(e) => setEditingShift(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold"
+                />
+
+                <div className="grid grid-cols-4 gap-1.5">
+                  {shiftPatterns.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setEditingShift(prev => ({
+                        ...prev, shiftName: p.name, startTime: p.startTime, endTime: p.endTime, breakTime: p.breakTime, paidLeaveHours: p.paidLeaveHours, color: p.color, bgColor: p.bgColor
+                      }))}
+                      className={`py-2 rounded-xl text-xs font-bold border transition ${
+                        editingShift.shiftName === p.name ? 'border-pink-600 bg-pink-50 text-pink-600' : 'border-slate-200 bg-white text-slate-700'
+                      }`}
+                    >{p.name}</button>
+                  ))}
+                </div>
+
+                <div className="bg-pink-50/60 p-3 rounded-2xl border border-pink-100">
+                  <div className="flex justify-between text-xs font-bold text-slate-800 mb-2">
+                    <span>有給休暇の消費</span>
+                    <span className="text-pink-600 font-extrabold">{editingShift.paidLeaveHours || 0} 時間</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2, 4, 8].map(h => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setEditingShift(prev => ({ ...prev, paidLeaveHours: h }))}
+                        className={`flex-1 py-1.5 rounded-xl text-xs font-bold border transition ${
+                          editingShift.paidLeaveHours === h ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-slate-600 border-slate-200'
+                        }`}
+                      >{h === 0 ? 'なし' : `${h}h`}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {editingShift.paidLeaveHours < workHoursPerDay && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="time" value={editingShift.startTime} onChange={(e) => setEditingShift(prev => ({ ...prev, startTime: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                    <input type="time" value={editingShift.endTime} onChange={(e) => setEditingShift(prev => ({ ...prev, endTime: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+                  </div>
+                )}
+
+                <div className="pt-1 space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-400 block">スマホのカレンダーに追加</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => handleSyncCalendar(editingShift, 'google')} className="py-2 px-3 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-blue-100 transition">
+                      <Icons.ExternalLink /><span>Google</span>
+                    </button>
+                    <button type="button" onClick={() => handleSyncCalendar(editingShift, 'apple')} className="py-2 px-3 rounded-xl bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-slate-100 transition">
+                      <Icons.ExternalLink /><span>Apple/Outlook</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50">キャンセル</button>
+                  <button
+                    onClick={() => {
+                      setShifts(prev => {
+                        const newArray = prev.filter(s => s.date !== editingShift.date);
+                        // もし公休で時間0なら削除（スタンプ消去に使える）として扱うことも可能ですが、今回は保存する
+                        return [...newArray, { ...editingShift, id: editingShift.id || `s-${Date.now()}` }];
+                      });
+                      setIsModalOpen(false);
+                      showToast('シフトを保存しました', 'success');
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition"
+                  >保存</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* シフトパターンの編集・削除モーダル */}
+          {isPatternModalOpen && editingPattern && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900">シフトパターンの編集</h3>
+                  <button onClick={() => setIsPatternModalOpen(false)} className="text-slate-400 p-1"><Icons.Close /></button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">シフト名</label>
+                    <input
+                      type="text"
+                      value={editingPattern.name}
+                      onChange={e => setEditingPattern(prev => ({...prev, name: e.target.value}))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">開始時間</label>
+                      <input
+                        type="time"
+                        value={editingPattern.startTime}
+                        onChange={e => setEditingPattern(prev => ({...prev, startTime: e.target.value}))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">終了時間</label>
+                      <input
+                        type="time"
+                        value={editingPattern.endTime}
+                        onChange={e => setEditingPattern(prev => ({...prev, endTime: e.target.value}))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">デフォルト有給消費 (時間)</label>
+                    <select
+                      value={editingPattern.paidLeaveHours}
+                      onChange={e => setEditingPattern(prev => ({...prev, paidLeaveHours: Number(e.target.value)}))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold"
+                    >
+                      {[0, 1, 2, 4, 8].map(h => <option key={h} value={h}>{h === 0 ? 'なし' : `${h}時間`}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    onClick={() => deletePattern(editingPattern.id)}
+                    className="py-2.5 px-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
+                    title="削除"
+                  >
+                    <Icons.Trash />
+                  </button>
+                  <button
+                    onClick={() => setIsPatternModalOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={savePattern}
+                    className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition"
+                  >
+                    更新する
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 最下部ナビバー */}
+          <nav className="bottom-safe-area bg-white border-t border-slate-200 shrink-0 px-4 pt-2.5 flex justify-around shadow-lg z-20">
+            <button onClick={() => setActiveTab('calendar')} className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'calendar' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}>
+              <Icons.Calendar /><span className="text-[10px]">カレンダー</span>
+            </button>
+            <button onClick={() => setActiveTab('scan')} className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'scan' ? 'text-pink-600 font-black' : 'text-slate-400'}`}>
+              <Icons.Camera /><span className="text-[10px]">切り抜きスキャン</span>
+            </button>
+            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'settings' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}>
+              <Icons.Settings /><span className="text-[10px]">設定</span>
+            </button>
+          </nav>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
