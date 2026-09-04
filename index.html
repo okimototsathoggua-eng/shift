@@ -69,7 +69,6 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useCallback } = React;
 
-    // システムデフォルトのAPIキー（Canvas環境用）
     const defaultApiKey = "";
 
     const Icons = {
@@ -99,8 +98,6 @@
 
     function App() {
       const [activeTab, setActiveTab] = useState('calendar');
-      
-      // ユーザー固有のAPIキーをlocalStorageから読み込む
       const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('shift_snap_api_key') || '');
 
       const [targetName, setTargetName] = useState('中野 優希');
@@ -116,11 +113,9 @@
       const [currentDate, setCurrentDate] = useState(new Date());
       const [shifts, setShifts] = useState([]);
 
-      // スタンプ入力（連続タップ）モード用
       const [stampModeActive, setStampModeActive] = useState(false);
       const [selectedStampPattern, setSelectedStampPattern] = useState(null);
 
-      // スキャン用ステート
       const [selectedImage, setSelectedImage] = useState(null); 
       const [croppedImageBase64, setCroppedImageBase64] = useState(null); 
       const [crop, setCrop] = useState({ unit: '%', width: 90, height: 10, x: 5, y: 45 }); 
@@ -132,7 +127,6 @@
       const imgRef = useRef(null);
       const fileInputRef = useRef(null);
 
-      // モーダル
       const [editingShift, setEditingShift] = useState(null);
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
@@ -186,7 +180,7 @@
       };
       const paidLeaveStats = calculatePaidLeave();
 
-      // 画像を読み込み、巨大な場合はCanvasで縮小（最大2500px）してクラッシュを防ぐ
+      // 🛑 【超重要・クラッシュ防止】選択された瞬間に画像を最大1200pxへ事前縮小
       const handleImageChange = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -195,16 +189,13 @@
         reader.onload = (event) => {
           const img = new Image();
           img.onload = () => {
-            const MAX_SIZE = 2500;
+            const MAX_WIDTH = 1200;
             let width = img.width;
             let height = img.height;
 
-            if (width > height && width > MAX_SIZE) {
-              height *= MAX_SIZE / width;
-              width = MAX_SIZE;
-            } else if (height > MAX_SIZE) {
-              width *= MAX_SIZE / height;
-              height = MAX_SIZE;
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
             }
 
             const canvas = document.createElement('canvas');
@@ -213,7 +204,7 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.9);
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
             setSelectedImage(compressedBase64);
             setIsCropping(true); 
             setCroppedImageBase64(null);
@@ -283,9 +274,8 @@
           const year = currentDate.getFullYear();
           const month = currentDate.getMonth() + 1;
 
-          // AIへの強制命令（一番左が1日）
-          const systemPrompt = `あなたはOCRスペシャリストです。提供された画像は、勤務シフト表の「特定の個人の1ヶ月分（1日〜末日）のシフト記号」が横一列に並んだ画像です。
-【重要】画像内に日付の数字（1, 2, 3...）が写っていなくても、一番左のマスを必ず「1日」とし、そこから右へ向かって2日、3日...と順番に数えて読み取ってください。
+          const systemPrompt = `あなたはOCRスペシャリストです。提供された画像は、勤務シフト表の「1ヶ月分（1日〜末日）のシフト記号」が横一列に並んだ画像です。
+一番左のマスを必ず「1日」とし、そこから右へ向かって2日、3日...と順番に数えて読み取ってください。
 空白や斜線（/）などは「公休」として扱ってください。
 登録されているシフトパターン: ${JSON.stringify(shiftPatterns.map(p => ({ name: p.name, symbol: p.symbol, hours: p.paidLeaveHours })))}
 対象年月: ${year}年${month}月
@@ -320,14 +310,12 @@
           const data = await res.json();
 
           if (!res.ok) {
-            console.error("API Error Response:", data);
             throw new Error(data.error?.message || `HTTP ${res.status}`);
           }
           
           let parsedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (!parsedText) throw new Error('解析結果が空でした');
           
-          // JSONから余計なマークダウン記号を剥がす
           parsedText = parsedText.replace(/```json/g, '').replace(/```/g, '').trim();
           const parsed = JSON.parse(parsedText);
 
@@ -349,7 +337,7 @@
           });
 
           if (list.length === 0) {
-            setScanMessage('シフトが読み取れませんでした。枠内に日付の記号が含まれているか確認してください。');
+            setScanMessage('シフトが読み取れませんでした。');
             showToast('見つかりませんでした', 'error');
           } else {
             setScanResults(list);
@@ -457,7 +445,6 @@
             </div>
           )}
 
-          {/* 上部ヘッダー */}
           <header className="top-safe-area bg-white border-b border-slate-200/80 px-4 pb-3 pt-2 shrink-0 flex items-center justify-between z-20 shadow-xs">
             <div className="flex items-center gap-2">
               <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition">&lt;</button>
@@ -569,7 +556,7 @@
               <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-4 space-y-3 overflow-y-auto no-scrollbar">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">自分の行だけを切り抜いて確実スキャン</h2>
-                  <p className="text-[11px] text-slate-500 mt-0.5">余計な文字を削ることで、AIがほぼ100%正確に読み取ります</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">軽量化処理済みなのでフリーズしません</p>
                 </div>
 
                 {!selectedImage && !croppedImageBase64 && (
@@ -581,15 +568,15 @@
                     <div className="w-14 h-14 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xs">
                       <Icons.Camera />
                     </div>
-                    <span className="text-sm font-bold text-slate-700 block">シフト表を選択</span>
-                    <span className="text-xs text-slate-400 block mt-1">選んだ後に自分の行だけを切り抜けます</span>
+                    <span className="text-sm font-bold text-slate-700 block">シフト表の写真を選択</span>
+                    <span className="text-xs text-slate-400 block mt-1">選択すると自動で安全サイズに縮小されます</span>
                   </div>
                 )}
 
                 {croppedImageBase64 && !scanResults.length && (
                   <div className="flex-1 flex flex-col items-center justify-center space-y-3">
                     <p className="text-xs font-bold text-slate-700">以下の行を解析します</p>
-                    <img src={croppedImageBase64.previewUrl} alt="切り抜いた画像" className="w-full border-2 border-indigo-200 rounded-lg shadow-sm" />
+                    <img src={croppedImageBase64.previewUrl} alt="切り抜いた画像" className="w-full border-2 border-indigo-200 rounded-lg shadow-sm max-h-48 object-contain" />
                     
                     <button
                       onClick={handleScanShiftTable}
@@ -638,7 +625,6 @@
             {activeTab === 'settings' && (
               <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 space-y-4 overflow-y-auto no-scrollbar">
                 
-                {/* 🔴 追加: APIキー設定パネル */}
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center gap-1.5 text-blue-800 font-bold text-sm">
                     <Icons.Key />
@@ -780,7 +766,6 @@
                       }`}
                     >{p.name}</button>
                   ))}
-                  {/* 公休（クリア）ボタン */}
                   <button
                     type="button"
                     onClick={() => setEditingShift(prev => ({
@@ -922,7 +907,6 @@
             </div>
           )}
 
-          {/* 最下部ナビバー */}
           <nav className="bottom-safe-area bg-white border-t border-slate-200 shrink-0 px-4 pt-2.5 flex justify-around shadow-lg z-20">
             <button onClick={() => setActiveTab('calendar')} className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition ${activeTab === 'calendar' ? 'text-indigo-600 font-black' : 'text-slate-400'}`}>
               <Icons.Calendar /><span className="text-[10px]">カレンダー</span>
