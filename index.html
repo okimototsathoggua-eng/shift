@@ -185,19 +185,60 @@
       };
       const paidLeaveStats = calculatePaidLeave();
 
-      // 画像選択
+      // 画像選択と自動リサイズ（ホワイトアウト対策）
       const handleImageChange = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          setSelectedImage(event.target.result);
-          setIsCropping(true); 
-          setCroppedImageBase64(null);
-          setScanResults([]);
-          setScanMessage('');
-        };
-        reader.readAsDataURL(file);
+
+        try {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              // 📱 スマホの高画質写真によるメモリクラッシュを防ぐため自動リサイズ
+              const MAX_WIDTH = 1200;
+              const MAX_HEIGHT = 1200;
+              let width = img.width;
+              let height = img.height;
+
+              if (width > height) {
+                if (width > MAX_WIDTH) {
+                  height *= MAX_WIDTH / width;
+                  width = MAX_WIDTH;
+                }
+              } else {
+                if (height > MAX_HEIGHT) {
+                  width *= MAX_HEIGHT / height;
+                  height = MAX_HEIGHT;
+                }
+              }
+
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              
+              // 描画して軽量なJPEGに圧縮
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+              setSelectedImage(compressedBase64);
+              setIsCropping(true); 
+              setCroppedImageBase64(null);
+              setScanResults([]);
+              setScanMessage('');
+            };
+            img.onerror = () => {
+              showToast('画像の読み込みに失敗しました', 'error');
+            };
+            img.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+        } catch (err) {
+          console.error(err);
+          showToast('画像の処理中にエラーが発生しました', 'error');
+        }
+        
         e.target.value = null;
       };
 
