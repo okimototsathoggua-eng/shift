@@ -320,18 +320,22 @@
           const year = currentDate.getFullYear();
           const month = currentDate.getMonth() + 1;
 
-          const systemPrompt = `あなたはOCRスペシャリストです。提供された画像は、勤務シフト表の「特定の個人の1ヶ月分（1日〜末日）のシフト記号」が横一列に並んだ画像です。
-左から順番に、1日、2日、3日...と対応しています。
-画像内にある記号（例: 日B, 準A, 公, 有, 半 など）を左から順番に読み取ってください。
-空欄や斜線（/）は「公休」扱いとしてください。
+          const systemPrompt = `あなたはシフト表解析の専門AIです。
+【重要】提供される画像は「特定の個人の1ヶ月分のシフト行だけ」を横長に切り抜いたものであり、画像内に「1日、2日...」といった日付の数字は写っていません。
+しかし、左端のマスが「1日」、その右隣が「2日」というように、左から右へ順番に並んでいます。
+
+【あなたのタスク】
+1. 画像の左端のマスから右へ向かって、順番にシフト記号（または空欄・斜線）を読み取ってください。
+2. 対象年月は ${year}年${month}月 です。必ず左から順にカウントし、この月の日数分（28〜31個）のデータを作成してください。
+3. 空欄や斜線（/）はすべて「公休」として扱ってください。
+4. 記号が読み取れないマスや空欄も絶対に飛ばさず「公休」としてカウントし、日付のズレを防いでください。
 
 登録されているシフトパターン: ${JSON.stringify(shiftPatterns.map(p => ({ name: p.name, symbol: p.symbol, hours: p.paidLeaveHours })))}
-対象年月: ${year}年${month}月
 
 必ず以下のJSON形式のみで出力してください:
 {
   "shifts": [
-    { "date": "YYYY-MM-DD", "shiftName": "読み取った記号", "startTime": "HH:MM", "endTime": "HH:MM", "paidLeaveHours": 数値, "note": "" }
+    { "date": "YYYY-MM-DD", "shiftName": "読み取った記号(または公休)", "startTime": "HH:MM", "endTime": "HH:MM", "paidLeaveHours": 数値, "note": "" }
   ]
 }`;
 
@@ -339,7 +343,7 @@
             contents: [{
               role: "user",
               parts: [
-                { text: `左から順に ${year}年${month}月 の1日からのシフトを抽出してください。` },
+                { text: `左端のマスを1日として、順に ${year}年${month}月 の末日までのシフトを抽出してください。` },
                 { inlineData: { mimeType: croppedImageBase64.mimeType, data: croppedImageBase64.data } }
               ]
             }],
