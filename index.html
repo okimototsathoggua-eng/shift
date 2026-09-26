@@ -309,7 +309,9 @@
           // 廃止・入れ替えが発生する。"gemini-flash-latest" は常に最新の安定版Flashモデルを
           // 指すエイリアス(2026年9月時点ではGA版のgemini-3.5-flashを指す)なので基本はこれを使い、
           // 万一それも使えなくなっていた場合に備えて具体的なモデル名にもフォールバックする。
-          const MODEL_CANDIDATES = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+          // gemini-2.5-flash は新規利用不可となり廃止されたため候補から削除。
+          // Googleの案内どおり gemini-3.8-flash を優先し、エイリアス・旧世代を保険として残す。
+          const MODEL_CANDIDATES = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash'];
 
           let data = null;
           let lastError = null;
