@@ -104,6 +104,7 @@
     function App() {
       const [activeTab, setActiveTab] = useState('calendar');
       const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('shift_snap_api_key') || '');
+      const [staffName, setStaffName] = useState(() => localStorage.getItem('shift_snap_staff_name') || '');
 
       const [workHoursPerDay, setWorkHoursPerDay] = useState(8);
       const [shiftPatterns, setShiftPatterns] = useState(DEFAULT_SHIFT_PATTERNS);
@@ -143,6 +144,12 @@
         const val = e.target.value;
         setUserApiKey(val);
         localStorage.setItem('shift_snap_api_key', val);
+      };
+
+      const handleStaffNameChange = (e) => {
+        const val = e.target.value;
+        setStaffName(val);
+        localStorage.setItem('shift_snap_staff_name', val);
       };
 
       // --- Fix #2: 有給残数の計算は「実際の今日」を基準に付与判定を行う ---
@@ -242,6 +249,10 @@
           showToast('APIキーが設定されていません。設定タブから入力してください。', 'error');
           return;
         }
+        if (!staffName.trim()) {
+          showToast('自分の名前が設定されていません。設定タブから入力してください。', 'error');
+          return;
+        }
 
         setIsScanning(true);
         setScanMessage('AIがシフト表を解析中...');
@@ -251,18 +262,29 @@
           const year = currentDate.getFullYear();
           const month = currentDate.getMonth() + 1;
 
-          const systemPrompt = `あなたはOCRスペシャリストです。提供された画像は、勤務シフト表の「1ヶ月分（1日〜末日）のシフト」が横一列またはカレンダー状に並んだ画像です。
-左から順に1日、2日...と数えて読み取ってください。
+          const systemPrompt = `あなたはOCRスペシャリストです。提供された画像は、勤務シフト表です。1ヶ月分（1日〜末日）のシフトが、横一列・縦一列・カレンダー状のいずれかの形式で並んでいます。
+
+【重要・最優先の指示】
+この画像には複数の担当者名(スタッフ名)が並ぶ「複数人分のシフト表」である可能性があります。
+- 表内に複数人の名前が記載されている場合は、対象者「${staffName.trim()}」に該当する行、または列だけを読み取ってください。他の担当者の行・列の内容は一切抽出しないでください(取り違えないよう特に注意してください)。
+- 氏名の表記ゆれ(姓のみ、フルネーム、旧字体、スペースの有無など)は同一人物として柔軟に判断してください。
+- 表内を探しても対象者「${staffName.trim()}」に該当する行・列が見つからない場合は、"shifts"を空配列にし、"error"に「対象者名が見つかりませんでした」と設定してください。憶測で他人のシフトを対象者のものとして返すことは絶対にしないでください。
+- 表が単一人物分のシフト表(名前欄が無い、または対象者名しか書かれていない)である場合は、通常どおりそのシフト全体を対象者「${staffName.trim()}」のシフトとして読み取ってください。
+
+【読み取りルール】
+左から順に1日、2日...と数えて読み取ってください(縦一列の場合は上から順に1日、2日...)。
 空白や斜線は「公休」として扱ってください。
 登録されているシフトパターン: ${JSON.stringify(shiftPatterns.map(p => ({ name: p.name, symbol: p.symbol, hours: p.paidLeaveHours })))}
 対象年月: ${year}年${month}月
 
 必ず以下のJSON形式のみで出力してください。Markdownの装飾(\`\`\`jsonなど)は絶対に含めないでください:
 {
+  "error": null,
   "shifts": [
     { "date": "YYYY-MM-DD", "shiftName": "読み取った記号", "startTime": "HH:MM", "endTime": "HH:MM", "paidLeaveHours": 数値, "note": "" }
   ]
-}`;
+}
+対象者が見つからない場合は "error" に理由の文字列を入れ、"shifts" は空配列にしてください。`;
 
           const payload = {
             contents: [{
@@ -311,6 +333,12 @@
           
           parsedText = parsedText.replace(/```json/g, '').replace(/```/g, '').trim();
           const parsed = JSON.parse(parsedText);
+
+          if (parsed.error) {
+            setScanMessage(`「${staffName.trim()}」さんの欄が見つかりませんでした。名前の表記(設定タブ)や写真の写り方を確認してください。`);
+            showToast('対象者が見つかりませんでした', 'error');
+            return;
+          }
 
           const list = (parsed.shifts || []).map((s, idx) => {
             const p = shiftPatterns.find(pat => pat.name === s.shiftName || pat.symbol === s.shiftName);
@@ -552,6 +580,18 @@
                   <p className="text-[11px] text-slate-500 mt-0.5">クラッシュ防止のため自動軽量化処理を挟みます</p>
                 </div>
 
+                {staffName.trim() ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-[11px] font-bold text-emerald-700 flex items-center justify-between">
+                    <span>対象者: 「{staffName}」の欄だけを抽出します</span>
+                    <button onClick={() => setActiveTab('settings')} className="text-emerald-600 underline shrink-0 ml-2">変更</button>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-[11px] font-bold text-amber-700 flex items-center justify-between">
+                    <span>⚠️ 名前が未設定です。まず設定タブで入力してください</span>
+                    <button onClick={() => setActiveTab('settings')} className="text-amber-700 underline shrink-0 ml-2">設定へ</button>
+                  </div>
+                )}
+
                 {!compressedImageData && (
                   <div
                     onClick={() => fileInputRef.current?.click()}
@@ -618,6 +658,24 @@
             {activeTab === 'settings' && (
               <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 space-y-4 overflow-y-auto no-scrollbar">
                 
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-1.5 text-emerald-800 font-bold text-sm">
+                    <Icons.Pencil />
+                    <span>自分の名前 (写真スキャンで使用)</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-600 leading-tight">
+                    複数人分のシフト表を撮影した場合、ここに入力した名前の行・列だけをAIが読み取ります。<br/>
+                    シフト表に記載されている表記(姓のみ・フルネームなど)に近い形で入力してください。
+                  </p>
+                  <input
+                    type="text"
+                    value={staffName}
+                    onChange={handleStaffNameChange}
+                    placeholder="例: 水月 / 山田"
+                    className="w-full bg-white border border-emerald-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center gap-1.5 text-blue-800 font-bold text-sm">
                     <Icons.Key />
