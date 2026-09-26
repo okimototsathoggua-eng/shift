@@ -271,8 +271,13 @@
 - 表内を探しても対象者「${staffName.trim()}」に該当する行・列が見つからない場合は、"shifts"を空配列にし、"error"に「対象者名が見つかりませんでした」と設定してください。憶測で他人のシフトを対象者のものとして返すことは絶対にしないでください。
 - 表が単一人物分のシフト表(名前欄が無い、または対象者名しか書かれていない)である場合は、通常どおりそのシフト全体を対象者「${staffName.trim()}」のシフトとして読み取ってください。
 
-【読み取りルール】
-左から順に1日、2日...と数えて読み取ってください(縦一列の場合は上から順に1日、2日...)。
+【読み取りルール・列や日付のズレを防ぐための最重要事項】
+表には通常、各列(または各行)の見出しとして「1」「2」「3」...「31」といった日付の数字、または「1(月)」「2(火)」のような曜日付きの日付ヘッダーが必ず存在します。
+- シフトを読み取る際は、列を左から数えて「何番目だから◯日のはず」と推測するのではなく、必ずその列の真上(横一列の場合)または真横(縦一列の場合)にある日付ヘッダーの数字そのものを直接読み取り、その数字を date の日付として使ってください。
+- 罫線が薄い・セルの幅が不揃い・ヘッダーの数字が小さいなどの理由で列がズレやすいので、対象者の行の1マスずつについて「このマスの真上(または真横)のヘッダーには何と書かれているか」を1つずつ個別に確認してから date を決定してください。まとめて数えないでください。
+- 対象者の行に、月の日数(28〜31)と一致しない数のマスしか見つからない場合や、同じ日付を2回読み取ってしまった場合は、読み違いの可能性が高いです。該当箇所を見直し、日付ヘッダーを再確認してください。
+- 読み取れた日付に抜けや重複がないか、出力前に必ずセルフチェックしてください(1日から月末まで連続しているか)。
+
 空白や斜線は「公休」として扱ってください。
 登録されているシフトパターン: ${JSON.stringify(shiftPatterns.map(p => ({ name: p.name, symbol: p.symbol, hours: p.paidLeaveHours })))}
 対象年月: ${year}年${month}月
@@ -629,28 +634,65 @@
 
                 {scanMessage && <p className="text-xs text-rose-600 font-bold p-3 bg-rose-50 rounded-xl border border-rose-100 break-words">{scanMessage}</p>}
 
-                {scanResults.length > 0 && (
-                  <div className="border-t border-slate-100 pt-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900">抽出結果 ({scanResults.length}件)</span>
-                      <button onClick={handleApplyScan} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-sm transition">カレンダーに登録</button>
-                    </div>
-                    <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
-                      {scanResults.map((item, idx) => (
-                        <div key={item.id} className="py-2 flex items-center justify-between text-xs">
-                          <span className="font-bold">{item.date.slice(5)}</span>
-                          <span className="font-bold text-indigo-600">{item.shiftName}</span>
-                          {item.paidLeaveHours > 0 ? (
-                            <span className="text-pink-600 font-bold">有休{item.paidLeaveHours}h</span>
-                          ) : (
-                            <span className="text-slate-500">{item.startTime}-{item.endTime}</span>
-                          )}
-                          <button onClick={() => setScanResults(prev => prev.filter((_, i) => i !== idx))} className="text-slate-400 hover:text-rose-500 p-1"><Icons.Trash /></button>
+                {scanResults.length > 0 && (() => {
+                  // 同じ日付が複数あればズレの疑いとしてハイライトする
+                  const dateCounts = {};
+                  scanResults.forEach(s => { dateCounts[s.date] = (dateCounts[s.date] || 0) + 1; });
+
+                  // 月の日数に対して抜けている日を洗い出す(セルフチェックの見える化)
+                  const totalDaysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+                  const foundDaySet = new Set(scanResults.map(s => Number(s.date?.slice(8, 10))));
+                  const missingDays = [];
+                  for (let d = 1; d <= totalDaysInMonth; d++) {
+                    if (!foundDaySet.has(d)) missingDays.push(d);
+                  }
+
+                  return (
+                    <div className="border-t border-slate-100 pt-3 space-y-2">
+                      {compressedImageData && (
+                        <details className="bg-slate-50 rounded-xl border border-slate-200">
+                          <summary className="text-[11px] font-bold text-slate-600 px-3 py-2 cursor-pointer select-none">📷 元の写真と見比べて確認する</summary>
+                          <img src={compressedImageData.preview} alt="プレビュー" className="w-full border-t border-slate-200 max-h-64 object-contain bg-white rounded-b-xl" />
+                        </details>
+                      )}
+
+                      {(Object.values(dateCounts).some(c => c > 1) || missingDays.length > 0) && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-[11px] font-bold text-amber-700 space-y-0.5">
+                          <div>⚠️ 列がズレている可能性があります。日付をタップして修正してください。</div>
+                          {Object.values(dateCounts).some(c => c > 1) && <div>・同じ日付が複数あります(下の赤い項目)</div>}
+                          {missingDays.length > 0 && <div>・抜けている日: {missingDays.join('、')}日</div>}
                         </div>
-                      ))}
+                      )}
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-900">抽出結果 ({scanResults.length}件)</span>
+                        <button onClick={handleApplyScan} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-sm transition">カレンダーに登録</button>
+                      </div>
+                      <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                        {scanResults.map((item, idx) => {
+                          const isDuplicate = dateCounts[item.date] > 1;
+                          return (
+                            <div key={item.id} className={`py-2 flex items-center justify-between text-xs gap-1.5 ${isDuplicate ? 'bg-rose-50 -mx-1 px-1 rounded-lg' : ''}`}>
+                              <input
+                                type="date"
+                                value={item.date || ''}
+                                onChange={(e) => setScanResults(prev => prev.map((s, i) => i === idx ? { ...s, date: e.target.value } : s))}
+                                className={`text-[11px] font-bold rounded-lg px-1 py-1 border shrink-0 ${isDuplicate ? 'border-rose-400 bg-white text-rose-600' : 'border-slate-200 bg-white'}`}
+                              />
+                              <span className="font-bold text-indigo-600 shrink-0">{item.shiftName}</span>
+                              {item.paidLeaveHours > 0 ? (
+                                <span className="text-pink-600 font-bold shrink-0">有休{item.paidLeaveHours}h</span>
+                              ) : (
+                                <span className="text-slate-500 shrink-0">{item.startTime}-{item.endTime}</span>
+                              )}
+                              <button onClick={() => setScanResults(prev => prev.filter((_, i) => i !== idx))} className="text-slate-400 hover:text-rose-500 p-1 ml-auto"><Icons.Trash /></button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
 
