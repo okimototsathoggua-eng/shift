@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja" class="h-full w-full">
 <head>
@@ -279,14 +278,33 @@
             }
           };
 
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${activeApiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+          // 個別バージョンのモデル名(例: gemini-2.5-flash-preview-09-25)は数ヶ月単位で
+          // 廃止・入れ替えが発生する。"gemini-flash-latest" は常に最新の安定版Flashモデルを
+          // 指すエイリアス(2026年9月時点ではGA版のgemini-3.5-flashを指す)なので基本はこれを使い、
+          // 万一それも使えなくなっていた場合に備えて具体的なモデル名にもフォールバックする。
+          const MODEL_CANDIDATES = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+
+          let data = null;
+          let lastError = null;
+          for (const modelName of MODEL_CANDIDATES) {
+            try {
+              const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${activeApiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+              const json = await res.json();
+              if (!res.ok) {
+                lastError = new Error(json.error?.message || `HTTP ${res.status}`);
+                continue; // このモデルがダメなら次の候補を試す
+              }
+              data = json;
+              break;
+            } catch (fetchErr) {
+              lastError = fetchErr;
+            }
+          }
+          if (!data) throw lastError || new Error('すべてのモデル候補で失敗しました');
           
           let parsedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (!parsedText) throw new Error('解析結果が空でした');
