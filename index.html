@@ -66,6 +66,11 @@
     const { useState, useEffect, useRef } = React;
 
     const defaultApiKey = "";
+    // このファイルが更新されるたびに手動で日時を書き換える。
+    // 設定タブの最下部とブラウザのコンソールに表示され、
+    // 「今動いているのが最新ファイルかどうか」をキャッシュ問題の切り分けに使う。
+    const APP_BUILD_VERSION = '2026-09-28 v7 (ICS一括書き出し追加)';
+    console.log('[ShiftSnap] build:', APP_BUILD_VERSION);
 
     // --- Fix #1: ローカル日付基準のヘルパー関数 ---
     // toISOString() はUTC基準になるため、JSTの深夜0時〜9時台に「今日」の判定がズレる。
@@ -89,7 +94,8 @@
       ExternalLink: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>,
       CursorClick: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>,
       Pencil: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>,
-      Key: () => <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+      Key: () => <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>,
+      Download: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
     };
 
     const DEFAULT_SHIFT_PATTERNS = [
@@ -132,6 +138,7 @@
       const [editingShift, setEditingShift] = useState(null);
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
+      const [isExportModalOpen, setIsExportModalOpen] = useState(false);
       const [editingPattern, setEditingPattern] = useState(null);
       const [newPatternName, setNewPatternName] = useState('');
 
@@ -406,6 +413,82 @@
         window.open(url, '_blank');
       };
 
+      // --- ICSの文字列内で特殊文字(カンマ・セミコロン・改行など)をエスケープする(RFC5545準拠) ---
+      const escapeICSText = (text) => String(text || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,')
+        .replace(/\n/g, '\\n');
+
+      // --- 複数シフトをまとめて1つのICSファイル(iCalendar形式)に変換する ---
+      // 時間指定のあるシフトはAsia/Tokyoのローカル時間で、公休・有給フルなどは終日イベントとして書き出す。
+      const buildICSForShifts = (shiftList) => {
+        const pad = (n) => String(n).padStart(2, '0');
+        const now = new Date();
+        const dtstamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+
+        const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ShiftSnap//JP', 'CALSCALE:GREGORIAN'];
+
+        shiftList.forEach((shift) => {
+          const dateClean = shift.date.replace(/-/g, '');
+          const summary = escapeICSText(`${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有休${shift.paidLeaveHours}h)` : ''}`);
+          const description = escapeICSText(`労働時間: ${shift.startTime && shift.endTime ? `${shift.startTime} - ${shift.endTime}` : 'なし'}\n備考: ${shift.note || 'なし'}`);
+
+          lines.push('BEGIN:VEVENT');
+          lines.push(`UID:${shift.id}@shiftsnap`);
+          lines.push(`DTSTAMP:${dtstamp}`);
+          lines.push(`SUMMARY:${summary}`);
+          lines.push(`DESCRIPTION:${description}`);
+
+          const isTimedShift = shift.startTime && shift.endTime && shift.paidLeaveHours < workHoursPerDay;
+          if (isTimedShift) {
+            const startClean = shift.startTime.replace(':', '') + '00';
+            const endClean = shift.endTime.replace(':', '') + '00';
+            lines.push(`DTSTART;TZID=Asia/Tokyo:${dateClean}T${startClean}`);
+            lines.push(`DTEND;TZID=Asia/Tokyo:${dateClean}T${endClean}`);
+          } else {
+            // 終日イベント: DTENDは仕様上「翌日」を指定する
+            const d = new Date(`${shift.date}T00:00:00`);
+            d.setDate(d.getDate() + 1);
+            const nextDateClean = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+            lines.push(`DTSTART;VALUE=DATE:${dateClean}`);
+            lines.push(`DTEND;VALUE=DATE:${nextDateClean}`);
+          }
+          lines.push('END:VEVENT');
+        });
+
+        lines.push('END:VCALENDAR');
+        return lines.join('\r\n');
+      };
+
+      // --- まとめたICSファイルをダウンロードする(scope: 'month' = 表示中の月のみ / 'all' = 全期間) ---
+      const handleExportICS = (scope) => {
+        const y = currentDate.getFullYear();
+        const m = currentDate.getMonth() + 1;
+        const targetShifts = scope === 'month'
+          ? shifts.filter(s => s.date.startsWith(`${y}-${String(m).padStart(2, '0')}`))
+          : shifts;
+
+        if (targetShifts.length === 0) {
+          showToast('書き出せるシフトがありません', 'error');
+          return;
+        }
+
+        const icsContent = buildICSForShifts(targetShifts);
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = scope === 'month' ? `shiftsnap_${y}-${String(m).padStart(2, '0')}.ics` : 'shiftsnap_all.ics';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+
+        setIsExportModalOpen(false);
+        showToast(`${targetShifts.length}件のシフトを書き出しました`, 'success');
+      };
+
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       const firstDay = new Date(year, month, 1).getDay();
@@ -480,20 +563,29 @@
               <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm active:scale-95 transition">&gt;</button>
             </div>
             
-            <button
-              onClick={() => {
-                setStampModeActive(!stampModeActive);
-                if (!stampModeActive && !selectedStampPattern) {
-                  setSelectedStampPattern(shiftPatterns[0]);
-                }
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95 ${
-                stampModeActive ? 'bg-emerald-600 text-white hover:bg-emerald-700 ring-2 ring-emerald-500/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              <Icons.CursorClick />
-              <span>{stampModeActive ? 'タップで入力中' : '連続タップ入力'}</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setIsExportModalOpen(true)}
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 active:scale-95 transition shrink-0"
+                title="カレンダーへ一括書き出し"
+              >
+                <Icons.Download />
+              </button>
+              <button
+                onClick={() => {
+                  setStampModeActive(!stampModeActive);
+                  if (!stampModeActive && !selectedStampPattern) {
+                    setSelectedStampPattern(shiftPatterns[0]);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95 ${
+                  stampModeActive ? 'bg-emerald-600 text-white hover:bg-emerald-700 ring-2 ring-emerald-500/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Icons.CursorClick />
+                <span>{stampModeActive ? 'タップで入力中' : '連続タップ入力'}</span>
+              </button>
+            </div>
           </header>
 
           <main className="flex-1 w-full flex flex-col px-3 py-2.5 overflow-hidden">
@@ -826,6 +918,10 @@
                     >追加</button>
                   </div>
                 </div>
+
+                <div className="pt-2 pb-2 text-center">
+                  <span className="text-[10px] text-slate-300 font-mono">build: {APP_BUILD_VERSION}</span>
+                </div>
               </div>
             )}
           </main>
@@ -925,6 +1021,75 @@
               </div>
             </div>
           )}
+
+          {/* カレンダーへの一括書き出しモーダル */}
+          {isExportModalOpen && (() => {
+            const y = currentDate.getFullYear();
+            const m = currentDate.getMonth() + 1;
+            const monthPrefix = `${y}-${String(m).padStart(2, '0')}`;
+            const monthCount = shifts.filter(s => s.date.startsWith(monthPrefix)).length;
+            const allCount = shifts.length;
+
+            return (
+              <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+                <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-sm p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-900">カレンダーへ一括書き出し</h3>
+                    <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 p-1"><Icons.Close /></button>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    登録済みのシフトをまとめて1つのファイル(.ics)としてダウンロードします。ダウンロード後、お使いのカレンダーアプリで読み込む(インポートする)と、まとめて登録できます。
+                  </p>
+
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleExportICS('month')}
+                      disabled={monthCount === 0}
+                      className={`w-full py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition ${
+                        monthCount === 0 ? 'bg-slate-100 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-98'
+                      }`}
+                    >
+                      <Icons.Download />
+                      <span>{y}年{m}月だけ書き出す ({monthCount}件)</span>
+                    </button>
+                    <button
+                      onClick={() => handleExportICS('all')}
+                      disabled={allCount === 0}
+                      className={`w-full py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 border transition ${
+                        allCount === 0 ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 active:scale-98'
+                      }`}
+                    >
+                      <Icons.Download />
+                      <span>登録済みの全期間を書き出す ({allCount}件)</span>
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-2xl p-3 space-y-2 border border-slate-100">
+                    <p className="text-[11px] font-bold text-slate-700">読み込み方(お使いの環境に合わせて)</p>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                      <span className="font-bold text-slate-600">iPhone:</span> ダウンロードした通知(またはファイルアプリ)からファイルをタップすると、カレンダーに追加する画面が開きます。
+                    </p>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                      <span className="font-bold text-slate-600">Android:</span> ダウンロード後、Googleカレンダーアプリの「インポート」からファイルを選択してください。
+                    </p>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                      <span className="font-bold text-slate-600">パソコン(Google):</span> 下のボタンからGoogleカレンダーの設定画面を開き、「インポート」でダウンロードしたファイルを選んでください。
+                    </p>
+                    <a
+                      href="https://calendar.google.com/calendar/r/settings/export"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-700 underline"
+                    >
+                      <Icons.ExternalLink />
+                      <span>Googleカレンダーのインポート設定を開く</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* シフトパターンの編集・削除モーダル */}
           {isPatternModalOpen && editingPattern && (
