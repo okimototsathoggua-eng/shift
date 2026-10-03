@@ -24,8 +24,6 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Googleカレンダーへ直接書き込むためのGoogle Identity Services (OAuth) -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
     html, body, #root {
@@ -71,7 +69,7 @@
     // このファイルが更新されるたびに手動で日時を書き換える。
     // 設定タブの最下部とブラウザのコンソールに表示され、
     // 「今動いているのが最新ファイルかどうか」をキャッシュ問題の切り分けに使う。
-    const APP_BUILD_VERSION = '2026-09-28 v8 (Googleカレンダー直接書き込み対応)';
+    const APP_BUILD_VERSION = '2026-09-28 v10 (iPhone向け:ワンタップでカレンダー追加画面を直接表示)';
     console.log('[ShiftSnap] build:', APP_BUILD_VERSION);
 
     // --- Fix #1: ローカル日付基準のヘルパー関数 ---
@@ -142,17 +140,11 @@
       const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
       const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-      // --- Googleカレンダー連携(OAuth直接書き込み)用のstate ---
-      const [googleClientId, setGoogleClientId] = useState(() => localStorage.getItem('shift_snap_google_client_id') || '');
-      const [googleAccessToken, setGoogleAccessToken] = useState(null); // 実行中のみ保持(保存しない)
-      const [googleTokenExpiresAt, setGoogleTokenExpiresAt] = useState(0);
-      const [googleUserEmail, setGoogleUserEmail] = useState('');
-      const [googleCalendars, setGoogleCalendars] = useState([]);
-      const [selectedGCalId, setSelectedGCalId] = useState(() => localStorage.getItem('shift_snap_google_cal_id') || 'primary');
-      const [isGoogleConnecting, setIsGoogleConnecting] = useState(false);
-      const [isSyncingToGoogle, setIsSyncingToGoogle] = useState(false);
-      const [syncProgressText, setSyncProgressText] = useState('');
-      const googleTokenClientRef = useRef(null);
+      // --- Webhook経由(Zapier/Make等)でカレンダーに直接書き込むためのstate ---
+      // OAuth(Google Cloud Console登録)が不要で、iPhone/Android問わず使える方式。
+      const [webhookUrl, setWebhookUrl] = useState(() => localStorage.getItem('shift_snap_webhook_url') || '');
+      const [isSendingWebhook, setIsSendingWebhook] = useState(false);
+      const [webhookProgressText, setWebhookProgressText] = useState('');
       const [editingPattern, setEditingPattern] = useState(null);
       const [newPatternName, setNewPatternName] = useState('');
 
@@ -503,151 +495,9 @@
         showToast(`${targetShifts.length}件のシフトを書き出しました`, 'success');
       };
 
-      const handleGoogleClientIdChange = (e) => {
-        const val = e.target.value.trim();
-        setGoogleClientId(val);
-        localStorage.setItem('shift_snap_google_client_id', val);
-        googleTokenClientRef.current = null; // クライアントID変更時は再初期化させる
-      };
-
-      // トークンクライアントを(必要なら)初期化して返す。GISスクリプトがまだ読み込まれていない場合はnullを返す。
-      const getGoogleTokenClient = () => {
-        if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) return null;
-        if (!googleClientId) return null;
-        if (googleTokenClientRef.current) return googleTokenClientRef.current;
-
-        const client = window.google.accounts.oauth2.initTokenClient({
-          client_id: googleClientId,
-          scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly openid email',
-          callback: () => {}, // requestAccessToken呼び出し時に都度上書きする
-        });
-        googleTokenClientRef.current = client;
-        return client;
-      };
-
-      const fetchGoogleCalendarList = async (token) => {
-        const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=writer&maxResults=250', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error(`カレンダー一覧の取得に失敗しました (HTTP ${res.status})`);
-        const data = await res.json();
-        return (data.items || []).map(c => ({ id: c.id, summary: c.summary, primary: !!c.primary }));
-      };
-
-      const fetchGoogleUserEmail = async (token) => {
-        try {
-          const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (!res.ok) return '';
-          const data = await res.json();
-          return data.email || '';
-        } catch {
-          return '';
-        }
-      };
-
-      const handleGoogleConnect = () => {
-        if (!googleClientId) {
-          showToast('先にGoogleのクライアントIDを設定タブで入力してください', 'error');
-          return;
-        }
-        const client = getGoogleTokenClient();
-        if (!client) {
-          showToast('Google認証の読み込み中です。少し待ってからもう一度お試しください', 'error');
-          return;
-        }
-
-        setIsGoogleConnecting(true);
-        client.callback = async (tokenResponse) => {
-          try {
-            if (tokenResponse.error) throw new Error(tokenResponse.error);
-            const token = tokenResponse.access_token;
-            setGoogleAccessToken(token);
-            setGoogleTokenExpiresAt(Date.now() + (Number(tokenResponse.expires_in || 3500) * 1000));
-
-            const [calendars, email] = await Promise.all([
-              fetchGoogleCalendarList(token),
-              fetchGoogleUserEmail(token)
-            ]);
-            setGoogleCalendars(calendars);
-            setGoogleUserEmail(email);
-            if (!calendars.some(c => c.id === selectedGCalId)) {
-              const primary = calendars.find(c => c.primary) || calendars[0];
-              if (primary) {
-                setSelectedGCalId(primary.id);
-                localStorage.setItem('shift_snap_google_cal_id', primary.id);
-              }
-            }
-            showToast('Googleカレンダーに接続しました', 'success');
-          } catch (err) {
-            console.error(err);
-            showToast(`Google接続に失敗しました: ${err.message}`, 'error');
-          } finally {
-            setIsGoogleConnecting(false);
-          }
-        };
-        client.requestAccessToken({ prompt: googleAccessToken ? '' : 'consent' });
-      };
-
-      const handleGoogleDisconnect = () => {
-        if (googleAccessToken && window.google?.accounts?.oauth2?.revoke) {
-          window.google.accounts.oauth2.revoke(googleAccessToken, () => {});
-        }
-        setGoogleAccessToken(null);
-        setGoogleTokenExpiresAt(0);
-        setGoogleUserEmail('');
-        setGoogleCalendars([]);
-        showToast('Googleカレンダーとの接続を解除しました', 'info');
-      };
-
-      // トークンの有効期限が近い/切れている場合は、確認画面なし(prompt: '')での再取得を試みる
-      const ensureFreshGoogleToken = () => {
-        return new Promise((resolve, reject) => {
-          if (googleAccessToken && Date.now() < googleTokenExpiresAt - 60000) {
-            resolve(googleAccessToken);
-            return;
-          }
-          const client = getGoogleTokenClient();
-          if (!client) { reject(new Error('Google認証が初期化されていません')); return; }
-          client.callback = (tokenResponse) => {
-            if (tokenResponse.error) { reject(new Error(tokenResponse.error)); return; }
-            const token = tokenResponse.access_token;
-            setGoogleAccessToken(token);
-            setGoogleTokenExpiresAt(Date.now() + (Number(tokenResponse.expires_in || 3500) * 1000));
-            resolve(token);
-          };
-          client.requestAccessToken({ prompt: '' });
-        });
-      };
-
-      // 1件のシフトをGoogleカレンダーのイベント形式に変換する
-      const shiftToGoogleEvent = (shift) => {
-        const isTimedShift = shift.startTime && shift.endTime && shift.paidLeaveHours < workHoursPerDay;
-        const summary = `${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有休${shift.paidLeaveHours}h)` : ''}`;
-        const description = `労働時間: ${shift.startTime && shift.endTime ? `${shift.startTime} - ${shift.endTime}` : 'なし'}\n備考: ${shift.note || 'なし'}`;
-
-        const event = {
-          summary,
-          description,
-          extendedProperties: { private: { shiftsnapSource: '1', shiftsnapId: shift.id } }
-        };
-
-        if (isTimedShift) {
-          event.start = { dateTime: `${shift.date}T${shift.startTime}:00`, timeZone: 'Asia/Tokyo' };
-          event.end = { dateTime: `${shift.date}T${shift.endTime}:00`, timeZone: 'Asia/Tokyo' };
-        } else {
-          const d = new Date(`${shift.date}T00:00:00`);
-          d.setDate(d.getDate() + 1);
-          const next = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-          event.start = { date: shift.date };
-          event.end = { date: next };
-        }
-        return event;
-      };
-
-      // 選択したGoogleカレンダーへシフトを直接書き込む(既に書き込み済みのものは更新、未書き込みは新規作成)
-      const handleWriteToGoogleCalendar = async (scope) => {
+      // --- iPhone(Safari)向け: ダウンロードさせず、ICSデータを直接開いてiOS標準の
+      // 「カレンダーに追加」画面(カレンダー選択つき)をそのまま表示させる。設定・外部サービス一切不要。
+      const handleOpenICSDirectly = (scope) => {
         const y = currentDate.getFullYear();
         const m = currentDate.getMonth() + 1;
         const targetShifts = scope === 'month'
@@ -655,76 +505,99 @@
           : shifts;
 
         if (targetShifts.length === 0) {
-          showToast('書き込めるシフトがありません', 'error');
-          return;
-        }
-        if (!selectedGCalId) {
-          showToast('書き込み先のカレンダーを選択してください', 'error');
+          showToast('追加できるシフトがありません', 'error');
           return;
         }
 
-        setIsSyncingToGoogle(true);
-        setSyncProgressText('準備中...');
+        const icsContent = buildICSForShifts(targetShifts);
+        const dataUri = `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
+        window.open(dataUri, '_blank');
+        setIsExportModalOpen(false);
+      };
+
+      const handleWebhookUrlChange = (e) => {
+        const val = e.target.value.trim();
+        setWebhookUrl(val);
+        localStorage.setItem('shift_snap_webhook_url', val);
+      };
+
+      // 1件のシフトをWebhook(Zapier/Make等)向けのJSONペイロードに変換する。
+      // Zapier/Makeの「Googleカレンダーにイベントを作成」アクション側で、
+      // この中のキー(summary / startDateTime / endDateTime など)をそれぞれの項目にマッピングして使う。
+      const shiftToWebhookPayload = (shift) => {
+        const isTimedShift = shift.startTime && shift.endTime && shift.paidLeaveHours < workHoursPerDay;
+        const summary = `${shift.shiftName}${shift.paidLeaveHours > 0 ? ` (有休${shift.paidLeaveHours}h)` : ''}`;
+        const description = `労働時間: ${shift.startTime && shift.endTime ? `${shift.startTime} - ${shift.endTime}` : 'なし'}\n備考: ${shift.note || 'なし'}`;
+
+        let endDate = shift.date;
+        if (!isTimedShift) {
+          const d = new Date(`${shift.date}T00:00:00`);
+          d.setDate(d.getDate() + 1);
+          endDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        return {
+          shiftsnapId: shift.id,
+          summary,
+          description,
+          shiftName: shift.shiftName,
+          paidLeaveHours: shift.paidLeaveHours || 0,
+          isAllDay: !isTimedShift,
+          date: shift.date,
+          startDateTime: isTimedShift ? `${shift.date}T${shift.startTime}:00+09:00` : null,
+          endDateTime: isTimedShift ? `${shift.date}T${shift.endTime}:00+09:00` : null,
+          allDayStartDate: !isTimedShift ? shift.date : null,
+          allDayEndDate: !isTimedShift ? endDate : null,
+        };
+      };
+
+      // 設定したWebhook URLへ、シフトを1件ずつ順番にPOST送信する(scope: 'month' | 'all')
+      const handleSendShiftsToWebhook = async (scope) => {
+        const y = currentDate.getFullYear();
+        const m = currentDate.getMonth() + 1;
+        const targetShifts = scope === 'month'
+          ? shifts.filter(s => s.date.startsWith(`${y}-${String(m).padStart(2, '0')}`))
+          : shifts;
+
+        if (!webhookUrl) {
+          showToast('Webhook URLが設定されていません。設定タブから入力してください。', 'error');
+          return;
+        }
+        if (targetShifts.length === 0) {
+          showToast('送信できるシフトがありません', 'error');
+          return;
+        }
+
+        setIsSendingWebhook(true);
+        let successCount = 0;
+        let failCount = 0;
         try {
-          const token = await ensureFreshGoogleToken();
-
-          // 既にShiftSnapから書き込み済みのイベントを調べて、重複作成せず更新に回す
-          const sortedDates = targetShifts.map(s => s.date).sort();
-          const timeMin = new Date(`${sortedDates[0]}T00:00:00+09:00`).toISOString();
-          const timeMaxDate = new Date(`${sortedDates[sortedDates.length - 1]}T00:00:00+09:00`);
-          timeMaxDate.setDate(timeMaxDate.getDate() + 1);
-          const timeMax = timeMaxDate.toISOString();
-
-          setSyncProgressText('既存の登録内容を確認中...');
-          const listRes = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(selectedGCalId)}/events?` +
-            `privateExtendedProperty=${encodeURIComponent('shiftsnapSource=1')}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&maxResults=2500&singleEvents=true`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          if (!listRes.ok) throw new Error(`既存イベントの確認に失敗しました (HTTP ${listRes.status})`);
-          const listData = await listRes.json();
-          const existingMap = {};
-          (listData.items || []).forEach(ev => {
-            const sid = ev.extendedProperties?.private?.shiftsnapId;
-            if (sid) existingMap[sid] = ev.id;
-          });
-
-          let successCount = 0;
-          let failCount = 0;
           for (let i = 0; i < targetShifts.length; i++) {
             const shift = targetShifts[i];
-            setSyncProgressText(`${i + 1} / ${targetShifts.length} 件を書き込み中...`);
-            const event = shiftToGoogleEvent(shift);
-            const existingEventId = existingMap[shift.id];
+            setWebhookProgressText(`${i + 1} / ${targetShifts.length} 件を送信中...`);
             try {
-              const url = existingEventId
-                ? `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(selectedGCalId)}/events/${existingEventId}`
-                : `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(selectedGCalId)}/events`;
-              const res = await fetch(url, {
-                method: existingEventId ? 'PATCH' : 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(event)
+              const res = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(shiftToWebhookPayload(shift))
               });
               if (!res.ok) throw new Error(`HTTP ${res.status}`);
               successCount++;
             } catch (err) {
-              console.error('Googleカレンダー書き込みエラー:', shift, err);
+              console.error('Webhook送信エラー:', shift, err);
               failCount++;
             }
           }
 
           setIsExportModalOpen(false);
           if (failCount === 0) {
-            showToast(`${successCount}件をGoogleカレンダーに書き込みました`, 'success');
+            showToast(`${successCount}件をWebhookに送信しました`, 'success');
           } else {
             showToast(`${successCount}件成功、${failCount}件失敗しました`, 'error');
           }
-        } catch (err) {
-          console.error(err);
-          showToast(`Googleカレンダーへの書き込みに失敗しました: ${err.message}`, 'error');
         } finally {
-          setIsSyncingToGoogle(false);
-          setSyncProgressText('');
+          setIsSendingWebhook(false);
+          setWebhookProgressText('');
         }
       };
 
@@ -1076,50 +949,40 @@
                 <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center gap-1.5 text-rose-800 font-bold text-sm">
                     <Icons.Calendar />
-                    <span>Googleカレンダー連携 (直接書き込み・任意)</span>
+                    <span>カレンダーへ直接書き込む (Webhook連携・任意)</span>
                   </div>
                   <p className="text-[11px] text-rose-600 leading-tight">
-                    設定すると、書き出し画面から選んだGoogleカレンダーへシフトを直接書き込めます(ファイルのダウンロード・インポート操作が不要になります)。<br/>
-                    利用には<a href="https://console.cloud.google.com/" target="_blank" className="underline font-bold text-rose-800">Google Cloud Console</a>で取得した「OAuthクライアントID」が必要です(通常はアプリ管理者が一度だけ設定します)。
+                    ZapierやMake.comなどの自動化サービスで「Webhookを受け取ってカレンダーに予定を作る」仕組みを1つ作り、そのURLをここに貼り付けると、書き出し画面のボタン1つでシフトを直接カレンダーに書き込めるようになります。iPhone・Android問わず使えます。
                   </p>
                   <input
                     type="text"
-                    value={googleClientId}
-                    onChange={handleGoogleClientIdChange}
-                    placeholder="xxxxxxxx.apps.googleusercontent.com"
+                    value={webhookUrl}
+                    onChange={handleWebhookUrlChange}
+                    placeholder="https://hooks.zapier.com/hooks/catch/..."
                     className="w-full bg-white border border-rose-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
                   />
 
-                  {googleAccessToken ? (
-                    <div className="bg-white/70 rounded-xl p-3 space-y-2 border border-rose-100">
-                      <p className="text-[11px] font-bold text-emerald-700">✓ 接続済み{googleUserEmail ? `: ${googleUserEmail}` : ''}</p>
-                      {googleCalendars.length > 0 && (
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-600 block mb-1">書き込み先カレンダー</label>
-                          <select
-                            value={selectedGCalId}
-                            onChange={(e) => { setSelectedGCalId(e.target.value); localStorage.setItem('shift_snap_google_cal_id', e.target.value); }}
-                            className="w-full bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-bold"
-                          >
-                            {googleCalendars.map(c => (
-                              <option key={c.id} value={c.id}>{c.summary}{c.primary ? ' (メイン)' : ''}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      <button onClick={handleGoogleDisconnect} className="text-[11px] text-rose-600 underline font-bold">接続を解除する</button>
+                  <details className="bg-white/70 rounded-xl border border-rose-100">
+                    <summary className="text-[11px] font-bold text-rose-700 px-3 py-2 cursor-pointer select-none">設定方法を見る(Zapier / Make.com)</summary>
+                    <div className="px-3 pb-3 space-y-2 text-[10px] text-slate-600 leading-relaxed">
+                      <p className="font-bold text-slate-700">① Zapier の場合(無料プランあり)</p>
+                      <p>1. <a href="https://zapier.com/" target="_blank" className="underline text-blue-700 font-bold">zapier.com</a> でアカウント作成し「Create Zap」<br/>
+                      2. トリガーに「Webhooks by Zapier」→「Catch Hook」を選び、表示されたURLをコピーして上の欄に貼り付け<br/>
+                      3. アクションに「Google Calendar」→「Create Detail Event」を選び、自分のGoogleアカウントを接続<br/>
+                      4. イベントの各項目に、Webhookから届く値を割り当てる:<br/>
+                      ・タイトル ← <span className="font-mono bg-slate-100 px-1 rounded">summary</span><br/>
+                      ・開始日時 ← <span className="font-mono bg-slate-100 px-1 rounded">startDateTime</span>(終日の場合は<span className="font-mono bg-slate-100 px-1 rounded">allDayStartDate</span>)<br/>
+                      ・終了日時 ← <span className="font-mono bg-slate-100 px-1 rounded">endDateTime</span>(終日の場合は<span className="font-mono bg-slate-100 px-1 rounded">allDayEndDate</span>)<br/>
+                      ・説明 ← <span className="font-mono bg-slate-100 px-1 rounded">description</span><br/>
+                      5. Zapを「オン」にすれば完了です</p>
+                      <p className="font-bold text-slate-700 pt-1">② Make.com の場合(無料枠が広めでおすすめ)</p>
+                      <p>1. <a href="https://www.make.com/" target="_blank" className="underline text-blue-700 font-bold">make.com</a> でシナリオを新規作成<br/>
+                      2. モジュールに「Webhooks」→「Custom webhook」を追加し、生成されたURLを上の欄に貼り付け<br/>
+                      3. 次のモジュールに「Google Calendar」→「Create an Event」を追加し、同様に項目をマッピング<br/>
+                      4. シナリオをオンにすれば完了です</p>
+                      <p className="text-amber-600 font-bold pt-1">⚠️ Zapierの無料プランは月100件までの実行制限があります。人数や頻度が多い場合はMake.com(無料で月1,000件まで)がおすすめです。</p>
                     </div>
-                  ) : (
-                    <button
-                      onClick={handleGoogleConnect}
-                      disabled={isGoogleConnecting || !googleClientId}
-                      className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
-                        !googleClientId ? 'bg-slate-100 text-slate-400' : 'bg-rose-600 text-white hover:bg-rose-700 active:scale-98'
-                      }`}
-                    >
-                      {isGoogleConnecting ? '接続中...' : 'Googleでログインして接続する'}
-                    </button>
-                  )}
+                  </details>
                 </div>
 
                 <h2 className="text-base font-bold text-slate-900 mt-2">シフト・有給設定</h2>
@@ -1326,51 +1189,68 @@
                     <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 p-1"><Icons.Close /></button>
                   </div>
 
-                  {googleAccessToken ? (
-                    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 space-y-2.5">
-                      <p className="text-[11px] font-bold text-rose-700">Googleカレンダーへ直接書き込む</p>
-                      {googleCalendars.length > 0 && (
-                        <select
-                          value={selectedGCalId}
-                          onChange={(e) => { setSelectedGCalId(e.target.value); localStorage.setItem('shift_snap_google_cal_id', e.target.value); }}
-                          className="w-full bg-white border border-rose-200 rounded-xl px-2 py-2 text-xs font-bold"
-                        >
-                          {googleCalendars.map(c => (
-                            <option key={c.id} value={c.id}>{c.summary}{c.primary ? ' (メイン)' : ''}</option>
-                          ))}
-                        </select>
-                      )}
-                      {isSyncingToGoogle ? (
-                        <div className="py-2.5 text-center text-xs font-bold text-rose-600">{syncProgressText || '書き込み中...'}</div>
-                      ) : (
-                        <div className="space-y-1.5">
-                          <button
-                            onClick={() => handleWriteToGoogleCalendar('month')}
-                            disabled={monthCount === 0}
-                            className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${
-                              monthCount === 0 ? 'bg-slate-100 text-slate-400' : 'bg-rose-600 text-white hover:bg-rose-700 active:scale-98'
-                            }`}
-                          >{y}年{m}月をこのカレンダーに書き込む ({monthCount}件)</button>
-                          <button
-                            onClick={() => handleWriteToGoogleCalendar('all')}
-                            disabled={allCount === 0}
-                            className={`w-full py-2.5 rounded-xl text-xs font-bold border transition ${
-                              allCount === 0 ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50 active:scale-98'
-                            }`}
-                          >全期間をこのカレンダーに書き込む ({allCount}件)</button>
-                        </div>
-                      )}
-                      <p className="text-[10px] text-rose-500 leading-tight">同じシフトを再度書き込んだ場合は、重複登録せず内容を上書き更新します。</p>
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5 space-y-2.5">
+                    <p className="text-[11px] font-bold text-indigo-700">📱 iPhoneのカレンダーに直接追加(設定不要)</p>
+                    <p className="text-[10px] text-indigo-500 leading-tight">
+                      ボタンを押すとiPhone標準の「カレンダーに追加」画面がそのまま開きます。追加先のカレンダーもその画面で選べます。あとは「すべて追加」をタップするだけです。
+                    </p>
+                    <div className="space-y-1.5">
+                      <button
+                        onClick={() => handleOpenICSDirectly('month')}
+                        disabled={monthCount === 0}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${
+                          monthCount === 0 ? 'bg-slate-100 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-98'
+                        }`}
+                      >{y}年{m}月を追加する ({monthCount}件)</button>
+                      <button
+                        onClick={() => handleOpenICSDirectly('all')}
+                        disabled={allCount === 0}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold border transition ${
+                          allCount === 0 ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 active:scale-98'
+                        }`}
+                      >全期間を追加する ({allCount}件)</button>
                     </div>
-                  ) : (
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-[11px] font-bold text-amber-700 flex items-center justify-between gap-2">
-                      <span>Googleカレンダーに接続すると、ここから直接書き込めます</span>
-                      <button onClick={() => setActiveTab('settings')} className="underline shrink-0">設定へ</button>
-                    </div>
-                  )}
+                  </div>
 
                   <details className="border-t border-slate-100 pt-3">
-                    <summary className="text-[11px] font-bold text-slate-500 cursor-pointer select-none">またはファイル(.ics)として書き出してインポートする</summary>
+                    <summary className="text-[11px] font-bold text-slate-500 cursor-pointer select-none">他の端末とシフトを共有する場合(任意・Webhook連携)</summary>
+                    <div className="mt-3">
+                      {webhookUrl ? (
+                        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 space-y-2.5">
+                          <p className="text-[11px] font-bold text-rose-700">Webhook経由でカレンダーへ直接書き込む</p>
+                          {isSendingWebhook ? (
+                            <div className="py-2.5 text-center text-xs font-bold text-rose-600">{webhookProgressText || '送信中...'}</div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <button
+                                onClick={() => handleSendShiftsToWebhook('month')}
+                                disabled={monthCount === 0}
+                                className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${
+                                  monthCount === 0 ? 'bg-slate-100 text-slate-400' : 'bg-rose-600 text-white hover:bg-rose-700 active:scale-98'
+                                }`}
+                              >{y}年{m}月を送信する ({monthCount}件)</button>
+                              <button
+                                onClick={() => handleSendShiftsToWebhook('all')}
+                                disabled={allCount === 0}
+                                className={`w-full py-2.5 rounded-xl text-xs font-bold border transition ${
+                                  allCount === 0 ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50 active:scale-98'
+                                }`}
+                              >全期間を送信する ({allCount}件)</button>
+                            </div>
+                          )}
+                          <p className="text-[10px] text-rose-500 leading-tight">送信先のZapier/Make側のシナリオがカレンダーへの登録を行います。設定がまだの場合は設定タブを確認してください。</p>
+                        </div>
+                      ) : (
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-[11px] font-bold text-amber-700 flex items-center justify-between gap-2">
+                          <span>Webhook URLを設定すると、ここから直接書き込めます</span>
+                          <button onClick={() => setActiveTab('settings')} className="underline shrink-0">設定へ</button>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+
+                  <details className="border-t border-slate-100 pt-3">
+                    <summary className="text-[11px] font-bold text-slate-500 cursor-pointer select-none">Androidなど: ファイル(.ics)として書き出してインポートする</summary>
                     <div className="mt-3 space-y-3">
                       <p className="text-[11px] text-slate-500 leading-relaxed">
                         登録済みのシフトをまとめて1つのファイル(.ics)としてダウンロードします。ダウンロード後、お使いのカレンダーアプリで読み込む(インポートする)と、まとめて登録できます。
