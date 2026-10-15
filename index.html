@@ -71,7 +71,7 @@
     // このファイルが更新されるたびに手動で日時を書き換える。
     // 設定タブの最下部とブラウザのコンソールに表示され、
     // 「今動いているのが最新ファイルかどうか」をキャッシュ問題の切り分けに使う。
-    const APP_BUILD_VERSION = '2026-10-15 v11 (iPhoneカレンダー/Googleカレンダー直接書き込み・単独利用版)';
+    const APP_BUILD_VERSION = '2026-10-15 v12 (iPhone追加をBlob/共有方式に修正)';
     console.log('[ShiftSnap] build:', APP_BUILD_VERSION);
 
     // --- Fix #1: ローカル日付基準のヘルパー関数 ---
@@ -506,7 +506,10 @@
 
       // --- iPhone(Safari)向け: ダウンロードさせず、ICSデータを直接開いてiOS標準の
       // 「カレンダーに追加」画面(カレンダー選択つき)をそのまま表示させる。設定・外部サービス一切不要。
-      const handleOpenICSDirectly = (scope) => {
+      // iPhone向け: ICSをBlobとして開く/共有する。
+      // mode 'open'  : 同じタブでICS(Blob URL)を開き、iOS標準の「カレンダーに追加」画面を出す
+      // mode 'share' : 共有メニューにICSファイルを渡す(「カレンダー」等を選ぶ)
+      const handleOpenICSDirectly = async (scope, mode = 'open') => {
         const y = currentDate.getFullYear();
         const m = currentDate.getMonth() + 1;
         const targetShifts = scope === 'month'
@@ -519,9 +522,29 @@
         }
 
         const icsContent = buildICSForShifts(targetShifts);
-        const dataUri = `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
-        window.open(dataUri, '_blank');
-        setIsExportModalOpen(false);
+        const fileName = scope === 'month' ? `shiftsnap_${y}-${String(m).padStart(2, '0')}.ics` : 'shiftsnap_all.ics';
+
+        if (mode === 'share') {
+          try {
+            const file = new File([icsContent], fileName, { type: 'text/calendar' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({ files: [file], title: 'シフト' });
+              setIsExportModalOpen(false);
+            } else {
+              showToast('この環境では共有メニューが使えません。「開く」を試してください', 'error');
+            }
+          } catch (err) {
+            if (err && err.name !== 'AbortError') {
+              console.error(err);
+              showToast(`共有に失敗しました: ${err.message}`, 'error');
+            }
+          }
+          return;
+        }
+
+        // data: URLはSafariにブロックされ白紙になるため、Blob URLを同じタブで開く
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        window.location.href = URL.createObjectURL(blob);
       };
 
       const handleGoogleClientIdChange = (e) => {
@@ -1362,6 +1385,9 @@
                           allCount === 0 ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 active:scale-98'
                         }`}
                       >全期間を追加する ({allCount}件)</button>
+                      <div className="flex gap-3 pt-0.5">
+                        <button onClick={() => handleOpenICSDirectly('month', 'share')} className="text-[10px] text-indigo-600 underline font-bold">開けない場合: {m}月を共有メニューから追加</button>
+                      </div>
                     </div>
                   </div>
 
