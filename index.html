@@ -70,8 +70,18 @@
     // このファイルが更新されるたびに手動で日時を書き換える。
     // 設定タブの最下部とブラウザのコンソールに表示され、
     // 「今動いているのが最新ファイルかどうか」をキャッシュ問題の切り分けに使う。
-    const APP_BUILD_VERSION = '2026-10-15 v15 (シフト設定変更・時間なし対応・ヘッダー調整)';
+    const APP_BUILD_VERSION = '2026-10-15 v16 (シフト・設定の自動保存)';
     console.log('[ShiftSnap] build:', APP_BUILD_VERSION);
+
+    // 端末内(localStorage)への保存・読込。読み込み失敗時は初期値を使う。
+    function loadStored(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw === null ? fallback : JSON.parse(raw);
+      } catch (e) {
+        return fallback;
+      }
+    }
 
     // --- Fix #1: ローカル日付基準のヘルパー関数 ---
     // toISOString() はUTC基準になるため、JSTの深夜0時〜9時台に「今日」の判定がズレる。
@@ -114,17 +124,33 @@
       const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('shift_snap_api_key') || '');
       const [staffName, setStaffName] = useState(() => localStorage.getItem('shift_snap_staff_name') || '');
 
-      const [workHoursPerDay, setWorkHoursPerDay] = useState(8);
-      const [shiftPatterns, setShiftPatterns] = useState(DEFAULT_SHIFT_PATTERNS);
+      const [workHoursPerDay, setWorkHoursPerDay] = useState(() => loadStored('shift_snap_work_hours', 8));
+      const [shiftPatterns, setShiftPatterns] = useState(() => loadStored('shift_snap_patterns', DEFAULT_SHIFT_PATTERNS));
 
-      const [basePaidLeaveDays, setBasePaidLeaveDays] = useState(15);
-      const [grantMonth, setGrantMonth] = useState(4);
-      const [grantDay, setGrantDay] = useState(1);
-      const [grantAmountDays, setGrantAmountDays] = useState(12);
-      const [baseYear, setBaseYear] = useState(2026);
+      const [basePaidLeaveDays, setBasePaidLeaveDays] = useState(() => loadStored('shift_snap_base_paid_days', 15));
+      const [grantMonth, setGrantMonth] = useState(() => loadStored('shift_snap_grant_month', 4));
+      const [grantDay, setGrantDay] = useState(() => loadStored('shift_snap_grant_day', 1));
+      const [grantAmountDays, setGrantAmountDays] = useState(() => loadStored('shift_snap_grant_amount', 12));
+      const [baseYear, setBaseYear] = useState(() => loadStored('shift_snap_base_year', 2026));
 
       const [currentDate, setCurrentDate] = useState(new Date());
-      const [shifts, setShifts] = useState([]);
+      const [shifts, setShifts] = useState(() => loadStored('shift_snap_shifts', []));
+
+      // 変更のたびに端末内へ自動保存する
+      useEffect(() => {
+        try {
+          localStorage.setItem('shift_snap_shifts', JSON.stringify(shifts));
+          localStorage.setItem('shift_snap_patterns', JSON.stringify(shiftPatterns));
+          localStorage.setItem('shift_snap_work_hours', JSON.stringify(workHoursPerDay));
+          localStorage.setItem('shift_snap_base_paid_days', JSON.stringify(basePaidLeaveDays));
+          localStorage.setItem('shift_snap_grant_month', JSON.stringify(grantMonth));
+          localStorage.setItem('shift_snap_grant_day', JSON.stringify(grantDay));
+          localStorage.setItem('shift_snap_grant_amount', JSON.stringify(grantAmountDays));
+          localStorage.setItem('shift_snap_base_year', JSON.stringify(baseYear));
+        } catch (e) {
+          console.warn('保存に失敗しました', e);
+        }
+      }, [shifts, shiftPatterns, workHoursPerDay, basePaidLeaveDays, grantMonth, grantDay, grantAmountDays, baseYear]);
 
       const [stampModeActive, setStampModeActive] = useState(false);
       const [selectedStampPattern, setSelectedStampPattern] = useState(null);
